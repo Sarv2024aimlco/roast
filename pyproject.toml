@@ -1,0 +1,21 @@
+[project]
+name = "roast"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "duckduckgo-search>=8.1.1",
+    "fastapi[standard]>=0.136.0",
+    "google-genai>=1.74.0",
+    "groq>=1.2.0",
+    "httpx>=0.28.1",
+    "instructor>=1.15.1",
+    "pydantic>=2.13.3",
+    "pymupdf>=1.27.2.2",
+    "python-dotenv>=1.2.2",
+    "sentence-transformers>=5.4.1",
+    "structlog>=25.5.0",
+    "upstash-redis>=1.7.0",
+]

@@ -1,0 +1,161 @@
+import json
+import structlog
+from backend.agents.schemas import JDRequirements, MarketContextOutput
+from backend.agents.prompts.template import build_system_prompt
+from backend.agents.prompts.market_context_prompt import VERSIONS as MC_VERSIONS, ACTIVE as MC_ACTIVE
+from backend.llm.router import call_groq_8b
+
+logger = structlog.get_logger()
+
+# ── JD Parser ─────────────────────────────────────────────────────────────────
+
+JD_PARSER_SYSTEM = """
+Parse the provided job description and extract structured requirements.
+Return ONLY valid JSON — no explanation, no markdown.
+
+{
+  "required_skills": ["skill1", "skill2"],
+  "preferred_skills": ["skill1"],
+  "experience_range": "2-5 years",
+  "role_level": "SDE2",
+  "key_responsibilities": ["responsibility1"],
+  "company_signals": ["signal about company culture or type"]
+}
+
+Rules:
+- required_skills: only hard technical requirements explicitly stated
+- preferred_skills: nice-to-haves, bonus skills
+- experience_range: exact range from JD or "not specified"
+- role_level: infer from JD if not explicit
+- company_signals: things that reveal company type (e.g. "fast-paced startup", "enterprise scale")
+"""
+
+
+async def parse_jd(jd_text: str, session_id: str = "") -> JDRequirements | None:
+    """
+    Parse a job description into structured requirements.
+    Returns None if JD text is empty or parsing fails.
+    """
+    if not jd_text or len(jd_text.strip()) < 50:
+        return None
+
+    messages = [
+        {"role": "system", "content": JD_PARSER_SYSTEM},
+        {"role": "user", "content": f"Parse this job description:\n\n{jd_text[:2000]}"},
+    ]
+
+    try:
+        text, _ = await call_groq_8b(messages, max_tokens=600, session_id=session_id)
+
+        # Strip markdown if present
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+
+        data = json.loads(text)
+        return JDRequirements(**data)
+
+    except Exception as e:
+        logger.error("jd_parse_failed", error=str(e), session_id=session_id)
+        return None
+
+
+# ── MarketContextAgent ────────────────────────────────────────────────────────
+
+async def run_market_context_agent(
+    distilled_context: str,
+    role: str,
+    company_type: str,
+    market: str,
+    experience_level: str,
+    user_context: str = "",
+    jd_requirements: JDRequirements | None = None,
+    session_id: str = "",
+) -> MarketContextOutput:
+    """
+    Agent 1 — runs alone first. All parallel agents wait for its output.
+    Interprets FullMarketContext into weight_map and calibration structures.
+    """
+    task = MC_VERSIONS[MC_ACTIVE]
+
+    system = build_system_prompt(
+        role=role,
+        company_type=company_type,
+        market=market,
+        experience_level=experience_level,
+        agent_task=task,
+        agent_output_rules="Return only valid JSON matching the schema above.",
+    )
+
+    jd_section = ""
+    if jd_requirements:
+        jd_section = f"\n\nJD REQUIREMENTS:\n{jd_requirements.model_dump_json(indent=2)}"
+
+    user_content = f"""MARKET INTELLIGENCE:
+{distilled_context}
+
+USER CONTEXT: {user_context or 'None provided'}
+{jd_section}
+
+Produce the MarketContextOutput JSON."""
+
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_content},
+    ]
+
+    try:
+        text, meta = await call_groq_8b(
+            messages, max_tokens=1000, temperature=0.1, session_id=session_id
+        )
+
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start != -1 and end > start:
+            text = text[start:end]
+
+        data = json.loads(text)
+
+        # Coerce format_expectations to string if model returned a dict
+        if isinstance(data.get("format_expectations"), dict):
+            data["format_expectations"] = json.dumps(data["format_expectations"])
+
+        # Inject JD requirements into output if provided
+        if jd_requirements:
+            data["jd_requirements"] = jd_requirements.model_dump()
+
+        output = MarketContextOutput(**data)
+
+        logger.info(
+            "market_context_agent_complete",
+            session_id=session_id,
+            confidence=output.confidence,
+            model=meta.get("model"),
+            prompt_version=MC_ACTIVE,
+        )
+
+        return output
+
+    except Exception as e:
+        logger.error("market_context_agent_failed", error=str(e), session_id=session_id)
+        # Return a safe fallback with LOW confidence
+        return MarketContextOutput(
+            market_norms=f"Standard {role} hiring norms for {market}",
+            format_expectations="Standard resume format",
+            competitive_pool_description="Competitive pool data unavailable",
+            red_flag_triggers=[],
+            weight_map={
+                "dsa": 0.7, "projects": 0.7, "cgpa": 0.5,
+                "experience": 0.7, "open_source": 0.4, "college_tier": 0.4
+            },
+            live_context_summary="Market intelligence unavailable for this analysis.",
+            confidence="LOW",
+        )

@@ -1,0 +1,155 @@
+import json
+import structlog
+from backend.agents.schemas import RedFlagOutput, RedFlag
+from backend.agents.prompts.template import build_system_prompt
+from backend.agents.prompts.red_flag_prompt import VERSIONS as RF_VERSIONS, ACTIVE as RF_ACTIVE
+from backend.agents.schemas import MarketContextOutput, JDRequirements
+from backend.llm.router import call_red_flag_agent
+
+logger = structlog.get_logger()
+
+# Phrases that indicate a generic, low-quality inference chain
+GENERIC_CHAIN_BLOCKLIST = [
+    "recruiters look for",
+    "is important to",
+    "hiring managers want",
+    "this shows that",
+    "lacks quantifiable",
+    "should include metrics",
+    "demonstrates that you",
+    "will negatively impact",
+]
+
+
+def _passes_quality_gate(flag: RedFlag) -> bool:
+    """
+    Validate a red flag passes the semantic quality gate.
+    Returns True if the flag is specific enough to keep.
+    """
+    # Length checks
+    if len(flag.location) < 10:
+        return False
+    if len(flag.fix) < 20:
+        return False
+    if len(flag.inference_chain) < 50:
+        return False
+
+    # Semantic quality check — count generic phrases
+    chain_lower = flag.inference_chain.lower()
+    generic_count = sum(1 for phrase in GENERIC_CHAIN_BLOCKLIST if phrase in chain_lower)
+
+    if generic_count >= 2:
+        return False
+
+    return True
+
+
+async def run_red_flag_agent(
+    resume_text: str,
+    market_context: MarketContextOutput,
+    role: str,
+    company_type: str,
+    market: str,
+    experience_level: str,
+    user_context: str = "",
+    jd_requirements: JDRequirements | None = None,
+    profile_links: dict | None = None,
+    session_id: str = "",
+) -> RedFlagOutput:
+    """
+    Agent 2 — runs in parallel.
+    Finds red flags with exact quotes, inference chains, and fixes.
+    Also performs visual scan.
+    Uses Gemini 3.1 Flash Lite — strong structured output, 500 RPD free.
+    """
+    task = RF_VERSIONS[RF_ACTIVE]  # no .format() — prompt contains JSON braces
+
+    # Inject role/market/company_type into the system prompt via build_system_prompt
+    # which handles the universal constraints formatting
+
+    system = build_system_prompt(
+        role=role,
+        company_type=company_type,
+        market=market,
+        experience_level=experience_level,
+        agent_task=task,
+        agent_output_rules="Return only valid JSON with red_flags array and visual_scan_notes string.",
+    )
+
+    jd_section = ""
+    if jd_requirements:
+        jd_section = f"\n\nJD REQUIREMENTS (flag gaps as jd_gap: true):\n{jd_requirements.model_dump_json(indent=2)}"
+
+    links_section = ""
+    if profile_links:
+        github = profile_links.get("github", "not found")
+        linkedin = profile_links.get("linkedin", "not found")
+        links_section = f"\n\nPROFILE LINKS:\nGitHub: {github}\nLinkedIn: {linkedin}"
+
+    prompt = f"""{system}
+
+RESUME TEXT:
+{resume_text[:4000]}
+
+MARKET RED FLAG TRIGGERS:
+{chr(10).join(f'- {t}' for t in market_context.red_flag_triggers)}
+
+USER CONTEXT: {user_context or 'None provided'}
+{jd_section}
+{links_section}
+
+Find all red flags and produce the JSON output."""
+
+    try:
+        text, meta = await call_red_flag_agent(
+            prompt=prompt,
+            max_tokens=2000,
+            session_id=session_id,
+        )
+
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start != -1 and end > start:
+            text = text[start:end]
+
+        data = json.loads(text)
+        raw_flags = [RedFlag(**f) for f in data.get("red_flags", [])]
+
+        # Apply quality gate — filter out generic flags
+        passed_flags = []
+        for flag in raw_flags:
+            if _passes_quality_gate(flag):
+                passed_flags.append(flag)
+            else:
+                # Cap severity to LOW for flags that barely pass
+                logger.warning(
+                    "red_flag_quality_gate_failed",
+                    flag=flag.flag[:50],
+                    session_id=session_id,
+                )
+
+        output = RedFlagOutput(
+            red_flags=passed_flags,
+            visual_scan_notes=data.get("visual_scan_notes", ""),
+        )
+
+        logger.info(
+            "red_flag_agent_complete",
+            session_id=session_id,
+            flags_found=len(passed_flags),
+            flags_filtered=len(raw_flags) - len(passed_flags),
+            model=meta.get("model"),
+            prompt_version=RF_ACTIVE,
+        )
+
+        return output
+
+    except Exception as e:
+        logger.error("red_flag_agent_failed", error=str(e), session_id=session_id)
+        return RedFlagOutput(red_flags=[], visual_scan_notes="")

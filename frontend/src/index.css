@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --roast-orange: #f97316;
+  --roast-orange-dark: #ea580c;
+  --roast-bg: #0a0a0a;
+  --roast-surface: #111111;
+  --roast-border: #222222;
+  --roast-text: #e5e5e5;
+  --roast-muted: #666666;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--roast-bg);
+  color: var(--roast-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--roast-bg); }
+::-webkit-scrollbar-thumb { background: var(--roast-border); border-radius: 3px; }
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--roast-surface) 25%,
+    #1a1a1a 50%,
+    var(--roast-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* Spinning icon */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}

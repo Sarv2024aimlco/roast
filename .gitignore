@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+*.pyc
+.python-version
+
+# Environment
+.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Database
+ingestion/market_intel.db
+
+# Misc
+*.zip
+*.md5
+roast_chat.txt
+roastv2.txt
+q-dev-chat-*.md

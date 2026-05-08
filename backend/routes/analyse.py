@@ -106,15 +106,18 @@ async def analyse(
 
     rate = check_and_increment_rate_limit(client_ip)
     if not rate["allowed"]:
-        # Check if this session has a token unlock
-        token_unlocked = redis.get(f"token_unlocked:{session_id}")
-        if not token_unlocked:
-            raise HTTPException(
-                status_code=429,
-                detail=f"Daily limit reached ({rate['limit']} analyses/day). Resets at midnight IST."
-            )
-        # Token unlock — delete it (one use only) and allow
-        redis.delete(f"token_unlocked:{session_id}")
+        # Skip rate limit in development
+        from backend.config import ENVIRONMENT
+        if ENVIRONMENT != "development":
+            # Check if this session has a token unlock
+            token_unlocked = redis.get(f"token_unlocked:{session_id}")
+            if not token_unlocked:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Daily limit reached ({rate['limit']} analyses/day). Resets at midnight IST."
+                )
+            # Token unlock — delete it (one use only) and allow
+            redis.delete(f"token_unlocked:{session_id}")
 
     # ── 5. Validate PDF ────────────────────────────────────
     if file.content_type != "application/pdf":

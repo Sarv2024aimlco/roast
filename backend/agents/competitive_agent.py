@@ -90,6 +90,13 @@ Produce the CompetitivePositioning JSON output.""",
             text = text[start:end]
 
         data = json.loads(text)
+
+        # Coerce confidence to valid literal
+        if "percentile_estimate" in data:
+            conf = data["percentile_estimate"].get("confidence", "estimated")
+            if conf not in ("estimated", "calibrated"):
+                data["percentile_estimate"]["confidence"] = "estimated"
+
         output = CompetitiveOutput(**data)
 
         logger.info(

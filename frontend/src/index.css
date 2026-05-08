@@ -1,18 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 :root {
   --roast-orange: #f97316;
-  --roast-orange-dark: #ea580c;
-  --roast-bg: #0a0a0a;
-  --roast-surface: #111111;
-  --roast-border: #222222;
-  --roast-text: #e5e5e5;
-  --roast-muted: #666666;
+  --roast-orange-dark: #c2410c;
+  --roast-bg: #0a0a0b;
+  --roast-surface: #111113;
+  --roast-surface-2: #1a1a1c;
+  --roast-border: #222226;
+  --roast-border-focus: #f97316;
+  --roast-text: #e4e4e7;
+  --roast-muted: #71717a;
+  --roast-placeholder: #52525b;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   background-color: var(--roast-bg);
@@ -23,12 +25,206 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--roast-bg); }
-::-webkit-scrollbar-thumb { background: var(--roast-border); border-radius: 3px; }
+h1, h2, h3, .font-display {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
 
-/* Skeleton shimmer animation */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Destroyed gradient text ─────────────────────────────────────────────── */
+.text-destroyed {
+  background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(249, 115, 22, 0.4));
+}
+
+/* ── Ambient glow behind headline ────────────────────────────────────────── */
+.headline-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(ellipse, rgba(249, 115, 22, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ── Glassmorphism dropzone ──────────────────────────────────────────────── */
+.dropzone {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(8px);
+  border: 1.5px dashed #333337;
+  border-radius: 12px;
+  transition: all 200ms ease;
+}
+
+.dropzone:hover, .dropzone.dragging {
+  border-color: var(--roast-orange);
+  background: rgba(249, 115, 22, 0.04);
+  transform: scale(1.015);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.15), 0 8px 32px rgba(249, 115, 22, 0.08);
+}
+
+.dropzone.has-file {
+  border-style: solid;
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.03);
+  transform: none;
+}
+
+/* ── Input fields ────────────────────────────────────────────────────────── */
+.roast-input {
+  background: var(--roast-surface-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--roast-text);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  outline: none;
+}
+
+.roast-input::placeholder {
+  color: var(--roast-placeholder);
+}
+
+.roast-input:focus {
+  border-color: var(--roast-orange);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.roast-select {
+  background: var(--roast-surface-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--roast-text);
+  transition: border-color 150ms ease;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.roast-select:focus {
+  border-color: var(--roast-orange);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.roast-select option {
+  background: #1a1a1c;
+  color: var(--roast-text);
+}
+
+/* ── Custom checkbox ─────────────────────────────────────────────────────── */
+.roast-checkbox {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border: 1.5px solid #444448;
+  border-radius: 4px;
+  background: var(--roast-surface-2);
+  cursor: pointer;
+  transition: all 150ms ease;
+  position: relative;
+}
+
+.roast-checkbox:checked {
+  background: var(--roast-orange);
+  border-color: var(--roast-orange);
+  animation: checkbox-pop 200ms ease;
+}
+
+.roast-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 6px;
+  height: 10px;
+  border: 2px solid white;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+@keyframes checkbox-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* ── Roast button ────────────────────────────────────────────────────────── */
+.roast-btn {
+  background: var(--roast-orange);
+  color: white;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.roast-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.roast-btn:hover:not(:disabled) {
+  background: var(--roast-orange-dark);
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.35), 0 4px 12px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+
+.roast-btn:active:not(:disabled) {
+  transform: scale(0.97) translateY(0);
+}
+
+.roast-btn:disabled {
+  background: var(--roast-surface-2);
+  color: var(--roast-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Terminal progress ───────────────────────────────────────────────────── */
+.terminal-line {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--roast-orange);
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 4px;
+  border-radius: 1px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -38,7 +234,7 @@ body {
   background: linear-gradient(
     90deg,
     var(--roast-surface) 25%,
-    #1a1a1a 50%,
+    #1e1e22 50%,
     var(--roast-surface) 75%
   );
   background-size: 200% 100%;
@@ -46,12 +242,45 @@ body {
   border-radius: 4px;
 }
 
-/* Spinning icon */
+/* ── Spin ────────────────────────────────────────────────────────────────── */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-.spin {
-  animation: spin 1s linear infinite;
+.spin { animation: spin 1s linear infinite; }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--roast-bg); }
+::-webkit-scrollbar-thumb { background: var(--roast-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #333337; }
+
+/* ── Focus rings for accessibility ──────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--roast-orange);
+  outline-offset: 2px;
+}
+
+/* ── Accordion smooth expand ─────────────────────────────────────────────── */
+.accordion-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+
+.accordion-content.open {
+  grid-template-rows: 1fr;
+}
+
+.accordion-inner {
+  overflow: hidden;
+}
+
+/* ── Auto-expanding textarea ─────────────────────────────────────────────── */
+.auto-expand {
+  resize: none;
+  overflow: hidden;
+  min-height: 80px;
+  max-height: 300px;
 }

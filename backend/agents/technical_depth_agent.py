@@ -158,6 +158,7 @@ async def run_technical_depth_agent(
         company_type=company_type,
         market=market,
         year=year,
+        experience_level=experience_level,
     )
 
     messages = [

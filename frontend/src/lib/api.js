@@ -24,7 +24,10 @@ export async function submitAnalysis({ sessionId, file, role, company_type, mark
   form.append('file', file)
 
   const res = await fetch(`${BASE}/analyse`, { method: 'POST', body: form })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(body)
+  }
   return res.json()
 }
 

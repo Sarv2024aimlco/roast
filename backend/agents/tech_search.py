@@ -7,7 +7,7 @@ No API key needed — uses DuckDuckGo directly.
 
 import asyncio
 import structlog
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 logger = structlog.get_logger()
 

@@ -58,6 +58,14 @@ OUTPUT SCHEMA — return valid JSON:
   "competitive_followups": ["question1", "question2"]
 }
 
+CRITICAL RULES — VIOLATIONS WILL FAIL QUALITY GATE:
+- If TechnicalDepthAgent says a project is ADVANCED or EXCEPTIONAL, the review MUST reflect this
+- If the resume shows production deployment evidence, NEVER say the candidate lacks production experience
+- If TechnicalDepthAgent says the resume is UNDERSELLING, the review MUST call this out explicitly
+- Do NOT invent gaps that aren't in the technical depth evaluation
+- Do NOT give generic advice ("deploy on AWS") if the candidate already has production experience
+- The review must be specific to THIS resume, not a template for any fresher
+
 RULES:
 - No bullet points inside prose sections — flowing paragraphs only
 - Each prose section must be AT LEAST 80 words

@@ -106,6 +106,23 @@ Find all red flags and produce the JSON output."""
             max_tokens=2000,
             session_id=session_id,
         )
+    except Exception as gemini_err:
+        # Gemini down — fall back to Groq 8B for red flag detection
+        logger.warning("red_flag_gemini_failed_falling_back_to_groq",
+                       error=str(gemini_err), session_id=session_id)
+        try:
+            from backend.llm.router import call_groq_8b
+            text, meta = await call_groq_8b(
+                messages=[
+                    {"role": "system", "content": system + "\n\n" + task},
+                    {"role": "user", "content": prompt.split("Find all red flags")[1] if "Find all red flags" in prompt else prompt}
+                ],
+                max_tokens=2000,
+                session_id=session_id,
+            )
+        except Exception as groq_err:
+            logger.error("red_flag_agent_all_failed", error=str(groq_err), session_id=session_id)
+            return RedFlagOutput(red_flags=[], visual_scan_notes="")
 
         if text.startswith("```"):
             text = text.split("```")[1]

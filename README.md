@@ -55,7 +55,7 @@ Fix first:          Add "X analyses run" to ROAST bullet. That's the difference
 
 ```mermaid
 flowchart TD
-    A[User uploads PDF] --> B[/analyse endpoint]
+    A[User uploads PDF] --> B["/analyse endpoint"]
     B --> C{Validate PDF\nRate limit\nBot detection}
     C --> D[DIVE Retrieval Pipeline]
     D --> E[(SQLite\nFTS5 + sqlite-vec)]
@@ -78,13 +78,13 @@ The core innovation — market intelligence is **prebuilt offline**, not fetched
 ```mermaid
 flowchart LR
     A[User submits\nrole + market] --> B{Redis\nSnapshot Cache}
-    B -->|HIT| F
     B -->|MISS| C[Query Rewriting\n6 targeted queries]
     C --> D[Parallel Search\nBM25 + Vector]
     D --> E[RRF Fusion\nk=60]
     E --> E2[Hash Dedup]
     E2 --> E3[Context Distiller\nGroq 8B]
     E3 --> F[FullMarketContext]
+    B -->|HIT| F
     F --> G[+ Breaking Signal\nGemini Flash Lite\n24h cache]
     G --> H[MarketContextAgent]
 ```
@@ -96,7 +96,7 @@ flowchart TD
     A[QStash Cron\n1st Monday 03:00 IST] --> B[10 Tavily Queries\nper combination]
     B --> C[Levels.fyi\ndirect httpx]
     B & C --> D[llama-3.1-8b\nClassify + Extract]
-    D -->|discard| X[❌ Skip]
+    D -->|discard| X[Skip]
     D -->|keep| E[HiringSignal\nkey_insight]
     E --> F[(SQLite\nmarket_intel.db)]
     F --> G[Generate Embeddings\nall-MiniLM-L6-v2]

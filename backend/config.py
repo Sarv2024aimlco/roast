@@ -20,6 +20,7 @@ GROQ_API_KEYS = get_required_key("GROQ_API_KEYS")
 GEMINI_API_KEYS = get_required_key("GEMINI_API_KEYS")
 CEREBRAS_API_KEY = get_optional_key("CEREBRAS_API_KEY")
 OPENROUTER_API_KEY = get_optional_key("OPENROUTER_API_KEY")
+NVIDIA_NIM_API_KEY = get_optional_key("NVIDIA_NIM_API_KEY")
 
 # ── Search & Scraping ──────────────────────────────────────
 

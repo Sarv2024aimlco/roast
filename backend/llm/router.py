@@ -1,19 +1,24 @@
 import asyncio
 import structlog
 from backend.llm.groq_client import groq_chat
-from backend.llm.gemini_client import gemini_chat, GEMMA_27B, GEMINI_FLASH_LITE, GEMMA_4_26B
+from backend.llm.gemini_client import gemini_chat, GEMMA_4_26B
+from backend.llm.cerebras_client import cerebras_chat
+from backend.llm.nvidia_nim_client import nim_chat
 from backend.llm.openrouter_client import openrouter_chat
 
 logger = structlog.get_logger()
 
 # ── ReviewAgent fallback chain ────────────────────────────────────────────────
+# Tried in order. Groq primary, then Cerebras (1M tok/day), then NVIDIA NIM
+# (40 RPM no daily cap), then Gemma as last resort, then OpenRouter emergency.
 REVIEW_MODEL_CHAIN = [
-    ("groq",       "meta-llama/llama-4-scout-17b-16e-instruct"),  # Primary: 1K RPD, 30K TPM
-    ("groq",       "llama-3.3-70b-versatile"),                    # Fallback A: 1K RPD
-    ("groq",       "qwen/qwen3-32b"),                             # Fallback B: 1K RPD, 60 RPM
-    ("groq",       "openai/gpt-oss-120b"),                        # Fallback C: frontier class, 1K RPD
-    ("gemini",     GEMMA_4_26B),                                  # Fallback D: 1.5K RPD, unlimited TPM
-    ("openrouter", None),                                         # Last resort: 50 RPD
+    ("groq",       "meta-llama/llama-4-scout-17b-16e-instruct"),  # 1K RPD, 30K TPM
+    ("groq",       "llama-3.3-70b-versatile"),                    # 1K RPD
+    ("groq",       "qwen/qwen3-32b"),                             # 1K RPD, 60 RPM
+    ("cerebras",   None),                                         # 1M tok/day free
+    ("nvidia_nim", None),                                         # 40 RPM, no daily cap
+    ("gemini",     GEMMA_4_26B),                                  # 1.5K RPD, last resort
+    ("openrouter", None),                                         # 50 RPD, emergency only
 ]
 
 
@@ -25,7 +30,6 @@ async def call_review_agent(
     """
     Try each provider in the fallback chain until one succeeds.
     Returns (response_text, metadata).
-    Raises RuntimeError if all providers fail.
     """
     last_error = None
 
@@ -33,25 +37,30 @@ async def call_review_agent(
         try:
             if provider == "groq":
                 return await groq_chat(
-                    messages=messages,
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=0.3,
+                    messages=messages, model=model,
+                    max_tokens=max_tokens, temperature=0.3,
+                    session_id=session_id,
+                )
+            elif provider == "cerebras":
+                return await cerebras_chat(
+                    messages=messages, max_tokens=max_tokens,
+                    session_id=session_id,
+                )
+            elif provider == "nvidia_nim":
+                return await nim_chat(
+                    messages=messages, max_tokens=max_tokens,
                     session_id=session_id,
                 )
             elif provider == "gemini":
                 prompt = _messages_to_prompt(messages)
                 return await gemini_chat(
-                    prompt=prompt,
-                    model=model,
-                    max_tokens=max_tokens,
-                    temperature=0.3,
+                    prompt=prompt, model=model,
+                    max_tokens=max_tokens, temperature=0.3,
                     session_id=session_id,
                 )
             elif provider == "openrouter":
                 return await openrouter_chat(
-                    messages=messages,
-                    max_tokens=max_tokens,
+                    messages=messages, max_tokens=max_tokens,
                     session_id=session_id,
                 )
 
@@ -59,10 +68,8 @@ async def call_review_agent(
             last_error = e
             logger.warning(
                 "provider_failed_trying_next",
-                provider=provider,
-                model=model,
-                error=str(e),
-                session_id=session_id,
+                provider=provider, model=model,
+                error=str(e), session_id=session_id,
             )
             continue
 
@@ -77,8 +84,9 @@ async def call_groq_8b(
 ) -> tuple[str, dict]:
     """
     For all 8B agents: MarketContextAgent, SixSecondAgent,
-    CompetitiveAgent, FollowUpAgent, DIVE distiller, JD parser.
-    Uses llama-3.1-8b-instant — 14,400 RPD.
+    CompetitiveAgent, FollowUpAgent, DIVE distiller, JD parser,
+    TechnicalDepthAgent, RedFlagAgent (moved from Gemini).
+    Uses llama-3.1-8b-instant — 14,400 RPD. Reliable.
     """
     return await groq_chat(
         messages=messages,
@@ -95,33 +103,41 @@ async def call_red_flag_agent(
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
-    RedFlagAgent uses Gemini 3.1 Flash Lite — strong instruction following,
-    500 RPD free. Falls back to Gemma 27B if Flash Lite fails.
+    RedFlagAgent — moved from Gemini to Groq 8B.
+    Gemini free tier has persistent 503 errors at peak times.
+    Groq 8B: 14,400 RPD, reliable, no 503s.
+    Falls back to Groq 70B if 8B is exhausted.
     """
+    messages = [{"role": "user", "content": prompt}]
+
+    # Try Groq 8B first
     try:
-        return await gemini_chat(
-            prompt=prompt,
-            model=GEMINI_FLASH_LITE,
+        return await groq_chat(
+            messages=messages,
+            model="llama-3.1-8b-instant",
             max_tokens=max_tokens,
             temperature=0.1,
             session_id=session_id,
         )
     except Exception as e:
-        logger.warning("flash_lite_failed_falling_back_to_gemma", error=str(e), session_id=session_id)
-        return await gemini_chat(
-            prompt=prompt,
-            model=GEMMA_27B,
+        logger.warning("red_flag_8b_failed_trying_70b", error=str(e), session_id=session_id)
+
+    # Fallback to Groq 70B
+    try:
+        return await groq_chat(
+            messages=messages,
+            model="llama-3.3-70b-versatile",
             max_tokens=max_tokens,
             temperature=0.1,
             session_id=session_id,
         )
+    except Exception as e:
+        logger.error("red_flag_all_groq_failed", error=str(e), session_id=session_id)
+        raise
 
 
 def _messages_to_prompt(messages: list[dict]) -> str:
-    """
-    Convert OpenAI-style messages list to a single prompt string for Gemini.
-    Gemini takes a single string, not a messages array.
-    """
+    """Convert OpenAI-style messages to single prompt string for Gemini."""
     parts = []
     for msg in messages:
         role = msg.get("role", "user")

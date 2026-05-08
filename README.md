@@ -58,11 +58,10 @@ flowchart TD
     A[User uploads PDF] --> B["/analyse endpoint"]
     B --> C{Validate PDF\nRate limit\nBot detection}
     C --> D[DIVE Retrieval Pipeline]
-    D --> E[(SQLite\nFTS5 + sqlite-vec)]
-    D --> F[Redis Snapshot Cache]
-    E --> G[MarketContextAgent]
+    D --> E[FullMarketContext]
+    E --> G[MarketContextAgent\nGroq 8B]
     G --> H{Parallel Agents}
-    H --> I[RedFlagAgent\nGemini Flash Lite]
+    H --> I[RedFlagAgent\nGroq 8B]
     H --> J[SixSecondAgent\nGroq 8B]
     H --> K[CompetitiveAgent\nGroq 8B]
     H --> L[TechnicalDepthAgent\nGroq 8B + DuckDuckGo]
@@ -186,15 +185,17 @@ Salary band: ₹15-30L base for freshers with production experience
 | Agent | Model | Provider | Why |
 |---|---|---|---|
 | MarketContextAgent | llama-3.1-8b-instant | Groq | 14,400 RPD, fast synthesis |
-| RedFlagAgent | gemini-3.1-flash-lite | Gemini API | Strong structured output, 500 RPD |
+| RedFlagAgent | llama-3.1-8b-instant | Groq | Reliable, 14,400 RPD, no 503s |
 | SixSecondAgent | llama-3.1-8b-instant | Groq | Fast, sufficient |
 | CompetitiveAgent | llama-3.1-8b-instant | Groq | Fast, sufficient |
 | TechnicalDepthAgent | llama-3.1-8b-instant | Groq | Fast + DuckDuckGo search |
 | ReviewAgent (primary) | llama-4-scout-17b | Groq | Best quality at 1K RPD |
 | ReviewAgent (fallback A) | llama-3.3-70b-versatile | Groq | 1K RPD |
 | ReviewAgent (fallback B) | qwen/qwen3-32b | Groq | 1K RPD, 60 RPM |
-| ReviewAgent (fallback C) | gpt-oss-120b | Groq | Frontier class, 1K RPD |
-| ReviewAgent (fallback D) | gemma-4-26b | Gemini API | 1.5K RPD, unlimited TPM |
+| ReviewAgent (fallback C) | llama-3.1-8b-instant | Cerebras | 1M tok/day free |
+| ReviewAgent (fallback D) | Llama 3.1 Nemotron | NVIDIA NIM | 40 RPM, no daily cap |
+| ReviewAgent (fallback E) | gemma-4-26b | Gemini API | 1.5K RPD, last resort |
+| ReviewAgent (fallback F) | openrouter default | OpenRouter | 50 RPD, emergency only |
 
 ### Data Sources
 | Source | Method | What it gives |
@@ -236,6 +237,8 @@ roast/
 │   ├── llm/
 │   │   ├── groq_client.py    # Key rotation + RPD tracking
 │   │   ├── gemini_client.py
+│   │   ├── cerebras_client.py
+│   │   ├── nvidia_nim_client.py
 │   │   ├── openrouter_client.py
 │   │   ├── circuit_breaker.py
 │   │   └── router.py         # Fallback chain
@@ -247,6 +250,7 @@ roast/
 │   │   ├── analyse.py        # POST /analyse
 │   │   ├── session.py        # POST /session-init
 │   │   ├── websocket.py      # WS /ws/{id}, GET /session/{id}/state
+│   │   ├── ws_manager.py     # WebSocket connection manager
 │   │   ├── followup.py       # POST /followup
 │   │   ├── cron.py           # POST /refresh-market-intel
 │   │   └── token_feedback.py # POST /token, POST /feedback
@@ -257,6 +261,8 @@ roast/
 │   ├── corpus/
 │   │   ├── corpus_store.py   # Anonymised signal storage
 │   │   └── bullet_curator.py # Bullet curation pipeline
+│   ├── config.py
+│   ├── pdf_reader.py
 │   └── main.py
 ├── ingestion/
 │   ├── pipeline.py           # Monthly ingestion orchestrator

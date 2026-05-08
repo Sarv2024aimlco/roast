@@ -111,10 +111,12 @@ RAW SIGNALS:
 Summary:"""
 
     try:
-        from backend.llm.gemini_client import gemini_chat, GEMINI_FLASH_LITE
-        text, _ = await gemini_chat(
-            prompt=prompt,
-            model=GEMINI_FLASH_LITE,
+        from backend.llm.router import call_groq_8b
+        text, _ = await call_groq_8b(
+            messages=[
+                {"role": "system", "content": "You are a hiring market analyst. Summarise the key hiring news in 2-3 specific sentences. Name companies and numbers where present. If nothing significant, say 'No major hiring news this week.'"},
+                {"role": "user", "content": f"Summarise hiring news for {role} roles at {company_type} companies in {market} this week:\n\n{combined}"},
+            ],
             max_tokens=150,
             temperature=0.1,
             session_id=session_id,

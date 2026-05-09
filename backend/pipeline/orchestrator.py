@@ -143,6 +143,20 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
     _store_section(sid, "market_context", market_context.model_dump())
     await _emit(sid, "section_complete", {"section": "market_context", "result": market_context.model_dump()})
 
+    # Also emit the full market intel (salary band, top skills, freshness, breaking signal)
+    market_intel_payload = {
+        "distilled": {
+            "salary_band": full_market_ctx.distilled.salary_band,
+            "top_required_skills": full_market_ctx.distilled.top_required_skills,
+            "freshness_label": full_market_ctx.distilled.freshness_label,
+            "hiring_sentiment": full_market_ctx.distilled.hiring_sentiment,
+        },
+        "breaking_signal": full_market_ctx.breaking_signal,
+        "breaking_available": full_market_ctx.breaking_available,
+    }
+    _store_section(sid, "market_intel", market_intel_payload)
+    await _emit(sid, "section_complete", {"section": "market_intel", "result": market_intel_payload})
+
     # ── Stage 3: Parallel agents ──────────────────────────────────────────────
 
     update_session(sid, {"step": "parallel_agents"})

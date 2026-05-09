@@ -15,8 +15,8 @@
   --roast-text-2: #cbd5e1;
   --roast-muted: #94a3b8;
   --roast-placeholder: #64748b;
-  --roast-card: #131720;
-  --roast-card-hover: #1a2030;
+  --roast-card: #1a2035;
+  --roast-card-hover: #1f2640;
 }
 
 * { box-sizing: border-box; }
@@ -32,6 +32,7 @@ body {
   -webkit-font-smoothing: antialiased;
   line-height: 1.65;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, .font-display {
@@ -94,7 +95,7 @@ body::before {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 700px;
+  width: min(700px, 100vw);
   height: 350px;
   background: radial-gradient(ellipse, rgba(249, 115, 22, 0.07) 0%, transparent 70%);
   pointer-events: none;
@@ -256,7 +257,7 @@ body::before {
   background: var(--roast-card);
   border: 1px solid var(--roast-border);
   border-radius: 16px;
-  padding: 24px;
+  padding: 18px 16px;
   position: relative;
   overflow: hidden;
 }
@@ -269,6 +270,7 @@ body::before {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
 }
+@media (min-width: 480px) { .roast-card { padding: 24px; } }
 @media (min-width: 640px) { .roast-card { padding: 28px; } }
 @media (min-width: 1024px) { .roast-card { padding: 32px; } }
 
@@ -276,10 +278,12 @@ body::before {
 .section-card {
   background: var(--roast-surface);
   border: 1px solid var(--roast-border);
+  border-left-width: 3px;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px 16px;
   transition: border-color 200ms ease;
 }
+@media (min-width: 480px) { .section-card { padding: 20px 24px; } }
 .section-card:hover { border-color: var(--roast-border-light); }
 
 /* ── Section label ───────────────────────────────────────────────────────── */
@@ -287,20 +291,22 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--roast-muted);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 /* ── Terminal ────────────────────────────────────────────────────────────── */
 .terminal-line {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.7;
+  overflow: hidden;
 }
+@media (min-width: 480px) { .terminal-line { font-size: 13px; } }
 .terminal-cursor {
   display: inline-block;
   width: 8px;
@@ -348,14 +354,17 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
-  padding: 6px 14px;
+  font-size: 0.7rem;
+  padding: 6px 12px;
   background: var(--roast-surface-2);
   border: 1px solid var(--roast-border);
   border-radius: 999px;
   color: var(--roast-muted);
   cursor: pointer;
   transition: all 150ms ease;
+  text-align: left;
+  word-break: break-word;
+  max-width: 100%;
 }
 .followup-pill:hover {
   border-color: rgba(249,115,22,0.4);

@@ -79,9 +79,11 @@ Produce the SixSecondAndTrajectory JSON output.""",
         data["gaps"] = [g.model_dump() for g in gaps]
 
         # Coerce None to empty string for optional string fields
-        for field in ["fresher_note", "github_signal", "linkedin_signal"]:
-            if data.get(field) is None:
-                data[field] = ""
+        for field in ["fresher_note", "github_signal", "linkedin_signal",
+                      "progression_signal", "promotion_velocity", "skill_evolution",
+                      "career_story", "first_impression", "survived_cut_assessment"]:
+            if data.get(field) is None or data.get(field) == "":
+                data[field] = data.get(field) or ""
 
         output = SixSecondAndTrajectoryOutput(**data)
 

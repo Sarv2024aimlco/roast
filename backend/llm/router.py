@@ -145,19 +145,23 @@ async def call_six_second_agent(
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
-    SixSecondAgent uses gpt-oss-20b on Groq — separate RPM bucket.
-    Cerebras key exhausted (402). Falls back to llama-3.1-8b.
+    SixSecondAgent — tries qwen3-32b first (reliable JSON, separate RPM bucket),
+    falls back to llama-3.1-8b on failure or empty response.
+    gpt-oss-20b was removed — consistently returned empty responses.
     """
     try:
-        return await groq_chat(
+        text, meta = await groq_chat(
             messages=messages,
-            model="openai/gpt-oss-20b",
+            model="qwen/qwen3-32b",
             max_tokens=max_tokens,
             temperature=temperature,
             session_id=session_id,
         )
+        if not text or not text.strip():
+            raise ValueError("qwen3_32b_empty_response")
+        return text, meta
     except Exception as e:
-        logger.warning("six_second_gpt_oss_20b_failed_falling_back", error=str(e), session_id=session_id)
+        logger.warning("six_second_primary_failed_falling_back", error=str(e), session_id=session_id)
         return await groq_chat(
             messages=messages,
             model="llama-3.1-8b-instant",

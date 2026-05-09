@@ -13,6 +13,17 @@ Calibrate the percentile against applicants at the SAME experience level, not al
 - A fresher with production experience, shipped projects, and GitHub presence should be 60th-80th percentile among freshers
 - Do NOT compare a fresher against senior engineers with 5+ years experience
 - The percentile must reflect realistic competition at this experience level
+- You MUST always provide a percentile estimate. If corpus signals are thin, use your knowledge of the {market} hiring market for {role} at {company_type} to estimate. Never return "Unable to estimate" — always give a range with reasoning.
+
+SALARY BANDS — MANDATORY:
+You MUST always include expected_ctc_range. Use your knowledge of {market} compensation for {role} at {company_type}.
+Examples for India freshers:
+- FAANG/top product: 20-45 LPA
+- Mid-tier product startup: 12-25 LPA
+- MNC India: 6-14 LPA
+- Indian Service Company: 3-6 LPA
+- Early-stage startup: 8-18 LPA
+Adjust based on experience level and percentile position.
 
 Output:
 {
@@ -23,6 +34,7 @@ Output:
     "reasoning": "must cite actual pool signals and specify the comparison group",
     "confidence": "estimated or calibrated"
   },
+  "expected_ctc_range": "e.g. ₹18-24 LPA — based on current market for this role/company type",
   "highest_leverage_change": "ONE specific actionable change that would move the percentile most",
   "estimated_impact": "what that change would do",
   "jd_fit_score": "e.g. 7/10 — missing Kafka and system design depth (only if JD provided, else null)"

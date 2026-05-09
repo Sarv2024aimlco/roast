@@ -81,11 +81,21 @@ Produce the CompetitivePositioning JSON output.""",
 
         data = extract_json(text)
 
-        # Coerce confidence to valid literal
-        if "percentile_estimate" in data:
-            conf = data["percentile_estimate"].get("confidence", "estimated")
-            if conf not in ("estimated", "calibrated"):
-                data["percentile_estimate"]["confidence"] = "estimated"
+        # Fill in missing required fields the LLM sometimes omits
+        data.setdefault("strengths_vs_pool", [])
+        data.setdefault("weaknesses_vs_pool", [])
+        data.setdefault("highest_leverage_change", "No specific recommendation available")
+        data.setdefault("estimated_impact", "")
+        data.setdefault("jd_fit_score", None)
+        data.setdefault("expected_ctc_range", "")
+
+        # percentile_estimate can be missing entirely or missing sub-fields
+        pe = data.get("percentile_estimate") or {}
+        pe.setdefault("range", "Unable to estimate")
+        pe.setdefault("reasoning", "Insufficient data to estimate percentile")
+        conf = pe.get("confidence", "estimated")
+        pe["confidence"] = conf if conf in ("estimated", "calibrated") else "estimated"
+        data["percentile_estimate"] = pe
 
         output = CompetitiveOutput(**data)
 

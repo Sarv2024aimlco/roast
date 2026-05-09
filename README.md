@@ -61,9 +61,9 @@ flowchart TD
     D --> E[FullMarketContext]
     E --> G[MarketContextAgent\nGroq 8B]
     G --> H{Parallel Agents}
-    H --> I[RedFlagAgent\nallam-2-7b]
-    H --> J[SixSecondAgent\nCerebras llama3.1-8b]
-    H --> K[CompetitiveAgent\nNVIDIA NIM llama-3.3-70b]
+    H --> I[RedFlagAgent\nllama-3.3-70b-versatile]
+    H --> J[SixSecondAgent\ngpt-oss-20b]
+    H --> K[CompetitiveAgent\nqwen3-32b]
     H --> L[TechnicalDepthAgent\ngpt-oss-120b + DuckDuckGo]
     I & J & K & L --> M[ReviewAgent\nllama-4-scout primary]
     M --> N[WebSocket Stream]
@@ -178,17 +178,16 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 | Agent | Model | Provider | Why |
 |---|---|---|---|
 | MarketContextAgent | llama-3.1-8b-instant | Groq | 14,400 RPD, fast synthesis |
-| RedFlagAgent | allam-2-7b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 7K RPD |
-| SixSecondAgent | llama3.1-8b → llama-3.1-8b fallback | Cerebras / Groq | 1M tok/day, spreads load off Groq |
-| CompetitiveAgent | llama-3.3-70b-instruct → llama-3.1-8b fallback | NVIDIA NIM / Groq | 40 RPM, no daily cap |
+| RedFlagAgent | llama-3.3-70b-versatile → llama-3.1-8b fallback | Groq | Reliable JSON, 2K RPD |
+| SixSecondAgent | gpt-oss-20b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 1K RPD |
+| CompetitiveAgent | qwen/qwen3-32b → llama-3.3-70b-instruct fallback | Groq / NVIDIA NIM | 60 RPM, strong reasoning |
 | TechnicalDepthAgent | gpt-oss-120b → llama-3.1-8b fallback | Groq | Frontier quality, 1K RPD |
-| ReviewAgent (primary) | llama-4-scout-17b-16e-instruct | Groq | Best quality at 1K RPD |
-| ReviewAgent (fallback A) | llama-3.3-70b-versatile | Groq | 1K RPD |
-| ReviewAgent (fallback B) | qwen/qwen3-32b | Groq | 1K RPD, 60 RPM |
-| ReviewAgent (fallback C) | llama3.1-8b | Cerebras | 1M tok/day free |
-| ReviewAgent (fallback D) | llama-3.3-70b-instruct | NVIDIA NIM | 40 RPM, no daily cap |
-| ReviewAgent (fallback E) | gemma-4-26b-a4b-it | Gemini API | 1.5K RPD, last resort |
-| ReviewAgent (fallback F) | openrouter default | OpenRouter | 50 RPD, emergency only |
+| ReviewAgent (primary) | llama-4-scout-17b-16e-instruct | Groq | 438 tok/s, 2K RPD |
+| ReviewAgent (fallback A) | llama-3.3-70b-versatile | Groq | 345 tok/s, 2K RPD |
+| ReviewAgent (fallback B) | qwen/qwen3-32b | Groq | 243 tok/s, 2K RPD |
+| ReviewAgent (fallback C) | gemini-2.5-flash-lite | Gemini API | 159 tok/s, 1.5K RPD |
+| ReviewAgent (fallback D) | llama-3.3-70b-instruct | NVIDIA NIM | 68 tok/s, no daily cap |
+| ReviewAgent (fallback E) | llama-3.3-70b:free | OpenRouter | 50 RPD, emergency only |
 
 ### Data Sources
 | Source | Method | What it gives |
@@ -199,6 +198,7 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 | LinkedIn posts | Tavily Deep (site:linkedin.com) | Hiring announcements |
 | TeamBlind | Tavily Deep (site:teamblind.com) | Compensation discussions |
 | LeetCode Discuss | Tavily Deep (site:leetcode.com) | Interview experiences |
+| Jina Reader | r.jina.ai (no key needed) | Full page when Tavily truncates content |
 
 ### Frontend
 | Component | Technology |
@@ -382,7 +382,7 @@ ENVIRONMENT=development
 
 ## Supported Roles & Markets
 
-**Roles:** SDE1, SDE2, Senior SDE, Full Stack Engineer, Backend Engineer, Embedded Systems Engineer, VLSI Design Engineer, Data Analyst, Data Scientist, Data Engineer, ML Engineer, AI Engineer, ML/AI Engineer (2+ years), DevOps/SRE, Product Manager, Business Analyst
+**Roles:** SDE1, SDE2, Senior SDE, Software Engineer / Associate, Full Stack Engineer, Backend Engineer, Embedded Systems Engineer, VLSI Design Engineer, Data Analyst, Data Scientist, Data Engineer, ML Engineer, AI Engineer, AI/ML Engineer, DevOps/SRE, Product Manager, Business Analyst
 
 **Markets:** India, USA, UAE, Singapore, UK
 
@@ -405,7 +405,7 @@ ENVIRONMENT=development
 | `POST` | `/token/verify` | Verify token, unlock extra analysis |
 | `GET` | `/session/{id}` | Raw session data |
 | `POST` | `/refresh-market-intel` | QStash cron trigger (HMAC verified) |
-| `GET` | `/health` | Liveness check |
+| `GET` | `/health` | Liveness check + total analyses count |
 
 ---
 
@@ -418,7 +418,7 @@ ENVIRONMENT=development
 | Upstash Redis | Session + cache | $0 (free tier, 500K commands/month) |
 | Upstash QStash | Monthly cron | $0 (free tier) |
 | Groq | LLM inference | $0 (free tier) |
-| Gemini API | ReviewAgent last resort | $0 (free tier) |
+| Gemini API | ReviewAgent fallback C | $0 (free tier) |
 | Tavily | Web search (2 keys) | $0 (free tier, 2K searches/month) |
 | Resend | Email tokens | $0 (free tier, 3K emails/month) |
 | **Total** | | **$0/month** |

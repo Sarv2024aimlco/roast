@@ -88,6 +88,7 @@ class CompetitiveOutput(BaseModel):
     strengths_vs_pool: list[str]
     weaknesses_vs_pool: list[str]
     percentile_estimate: PercentileEstimate
+    expected_ctc_range: str = ""           # e.g. "₹18-24 LPA"
     highest_leverage_change: str   # one specific actionable change
     estimated_impact: str          # what that change would do to percentile
     jd_fit_score: str | None       # e.g. "7/10 — missing Kafka and system design depth"

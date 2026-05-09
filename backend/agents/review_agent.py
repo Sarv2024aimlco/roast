@@ -121,6 +121,7 @@ Visual scan: {red_flags.visual_scan_notes}
 COMPETITIVE POSITION:
 Percentile: {competitive.percentile_estimate.range} ({competitive.percentile_estimate.confidence})
 Reasoning: {competitive.percentile_estimate.reasoning}
+Expected CTC range: {competitive.expected_ctc_range or 'Not estimated'}
 Highest leverage change: {competitive.highest_leverage_change}
 {jd_text}"""
 

@@ -45,7 +45,7 @@ export function MarketPulse({ marketContext, fullContext, loading }) {
           <p className="text-xs text-[--roast-muted]">Top skills</p>
           <div className="flex flex-wrap gap-2">
             {skills.map(s => (
-              <span key={s} className="text-xs font-mono px-2.5 py-1 bg-[--roast-surface-2] border border-[--roast-border] rounded-md text-[--roast-text]">
+              <span key={s} className="text-xs font-mono px-2.5 py-1 bg-orange-500/8 border border-orange-500/20 rounded-md text-orange-300">
                 {s}
               </span>
             ))}

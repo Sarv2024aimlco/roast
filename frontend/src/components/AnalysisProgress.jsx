@@ -16,11 +16,33 @@ const STEPS = [
 
 const ROAST_QUOTES = [
   'Pulling live job postings from Naukri...',
-  'Checking what Razorpay is actually hiring for...',
+  'Checking what top companies are actually hiring for...',
   'Comparing against real applicants at your level...',
   'Reading between the lines of your resume...',
-  'Calibrating to the Bengaluru market...',
+  'Calibrating to the real live market...',
   'Running 6 agents in parallel...',
+  'Cross-referencing your skills against JD keywords...',
+  'Scanning for buzzwords that recruiters actually care about...',
+  'Checking if your impact statements have real numbers...',
+  'Mapping your experience to current salary bands...',
+  'Identifying gaps vs. what hiring managers want...',
+  'Simulating a 6-second recruiter scan...',
+  'Hunting for red flags before the recruiter does...',
+  'Still running — this is the deep analysis part...',
+  'Benchmarking your tech stack against live job data...',
+  'Checking how you stack up against the competition...',
+  'Cross-referencing live market data again...',
+  'Analysing your career trajectory for consistency...',
+  'Looking for projects that actually move the needle...',
+  'Agents still crunching — almost there...',
+  'Verifying your seniority signals match your title...',
+  'Pulling compensation data for your target roles...',
+  'Scoring your resume against ATS filters...',
+  'Detecting vague language that kills shortlist chances...',
+  'Checking if your summary actually says anything...',
+  'Measuring keyword density vs. top-ranked candidates...',
+  'Evaluating technical depth against role requirements...',
+  'Almost done — writing your roast...',
 ]
 
 export function AnalysisProgress({ sessionId, sections }) {
@@ -48,20 +70,22 @@ export function AnalysisProgress({ sessionId, sections }) {
         if (state.status === 'completed') clearInterval(poll)
       } catch { /* ignore */ }
     }, 3000)
-    setStep(1)
     return () => clearInterval(poll)
   }, [sessionId])
 
-  useEffect(() => {
-    if (sections.review) setStep(8)
-    else if (sections.technical_depth) setStep(7)
-    else if (sections.competitive) setStep(6)
-    else if (sections.six_second) setStep(5)
-    else if (sections.red_flags) setStep(4)
-    else if (sections.market_context) setStep(3)
-  }, [sections])
+  // Derive an active step from the `sections` prop instead of calling setState
+  // synchronously inside an effect (avoids cascading renders / lint errors).
+  const sectionsStep = sections?.review ? 8
+    : sections?.technical_depth ? 7
+    : sections?.competitive ? 6
+    : sections?.six_second ? 5
+    : sections?.red_flags ? 4
+    : sections?.market_context ? 3
+    : 0
 
-  const pct = Math.round((step / STEPS.length) * 100)
+  const activeStep = Math.max(step, sectionsStep)
+
+  const pct = Math.round((activeStep / STEPS.length) * 100)
 
   return (
     <div className="min-h-[calc(100vh-52px)] flex flex-col items-center justify-center px-4 relative z-10">
@@ -115,9 +139,9 @@ export function AnalysisProgress({ sessionId, sections }) {
           {/* Steps */}
           <div className="space-y-2.5">
             {STEPS.map((s, i) => {
-              const isDone = i < step
-              const isActive = i === step
-              if (i > step) return null
+              const isDone = i < activeStep
+              const isActive = i === activeStep
+              if (i > activeStep) return null
               return (
                 <motion.div
                   key={s.key}
@@ -129,7 +153,7 @@ export function AnalysisProgress({ sessionId, sections }) {
                   <span className={`w-4 text-center shrink-0 ${isDone ? 'text-emerald-400' : isActive ? 'text-orange-400' : 'text-[--roast-placeholder]'}`}>
                     {isDone ? '✓' : isActive ? '›' : ' '}
                   </span>
-                  <span className={`flex-1 ${isDone ? 'text-[--roast-placeholder]' : isActive ? 'text-[--roast-text]' : 'text-[--roast-placeholder]'}`}>
+                  <span className={`flex-1 truncate ${isDone ? 'text-[--roast-placeholder]' : isActive ? 'text-[--roast-text]' : 'text-[--roast-placeholder]'}`}>
                     {isDone ? s.done : s.label}
                     {isActive && <span className="terminal-cursor" />}
                   </span>
@@ -157,7 +181,7 @@ export function AnalysisProgress({ sessionId, sections }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-[--roast-placeholder] font-mono">{pct}% complete</span>
-              <span className="text-xs text-[--roast-placeholder] font-mono">~{Math.max(0, Math.round((STEPS.length - step) * 2))}s remaining</span>
+              <span className="text-xs text-[--roast-placeholder] font-mono">~{Math.max(0, Math.round((STEPS.length - activeStep) * 2))}s remaining</span>
             </div>
           </div>
         </motion.div>

@@ -1,7 +1,7 @@
 """
 TechnicalDepthAgent — agentic version with tool calling.
 LLM reads the resume and decides what to search for itself.
-35s timeout — falls back to non-agentic if exceeded.
+35s timeout — falls back to non-agentic llama-3.1-8b if exceeded.
 """
 
 import json
@@ -10,7 +10,7 @@ import structlog
 from typing import Any
 from pydantic import BaseModel
 from backend.agents.tech_search import lookup_technology
-from backend.llm.router import call_technical_depth_agent as _call_agent
+from backend.llm.groq_client import groq_chat
 from groq import AsyncGroq
 from backend.config import GROQ_API_KEYS
 from backend.agents.json_utils import extract_json
@@ -40,6 +40,31 @@ class TechnicalDepthOutput(BaseModel):
     unverified_skills: list[str] = []
 
 
+# ── Search filter — block queries that are clearly not worth searching ─────────
+
+SKIP_SEARCH_TERMS = {
+    # Search/scraping tools
+    'duckduckgo', 'tavily', 'jina', 'selenium',
+    # MCP/protocol terms from ROAST's own description
+    'mcp server', 'mcp', 'model context protocol',
+    # LLM providers
+    'groq', 'openai', 'gemini', 'cerebras', 'nvidia nim', 'deepgram', 'anthropic',
+    # Mainstream frameworks
+    'langchain', 'fastapi', 'redis', 'websocket', 'docker', 'kubernetes',
+    'pytorch', 'tensorflow', 'huggingface', 'react', 'python', 'sql',
+    'github actions', 'flask', 'django', 'express', 'nodejs',
+    # Generic AI concepts
+    'rag', 'llm', 'rest api', 'microservices', 'ci/cd',
+    'groq distillation', 'distillation llm',
+    # LangGraph is mainstream enough
+    'langgraph',
+}
+
+def _should_skip_search(query: str) -> bool:
+    q = query.lower()
+    return any(term in q for term in SKIP_SEARCH_TERMS)
+
+
 # ── Tool ──────────────────────────────────────────────────────────────────────
 
 SEARCH_TOOL: dict[str, Any] = {
@@ -47,8 +72,8 @@ SEARCH_TOOL: dict[str, Any] = {
     "function": {
         "name": "search_web",
         "description": (
-            "Search the web for technical information about a niche technology, algorithm, "
-            "or concept mentioned in the resume that you need to understand to evaluate accurately."
+            "Search for a niche/unfamiliar technology, algorithm, or hardware component "
+            "mentioned in the resume. Only use for things you genuinely don't know well enough to evaluate."
         ),
         "parameters": {
             "type": "object",
@@ -65,17 +90,15 @@ SEARCH_TOOL: dict[str, Any] = {
 TECH_DEPTH_SYSTEM = """You are a senior engineer with 10+ years of experience who has hired 50+ engineers.
 Reviewing a resume for {role} at {company_type} in {market}.
 
-Use the search tool for niche/unfamiliar technologies where knowing more would change your evaluation.
+Use search_web ONLY for genuinely niche/unfamiliar items:
+- Specific chip families (STM32F446RE, nRF52840)
+- Niche algorithms (Bayesian NBV, RRF fusion, d-vector)
+- Non-mainstream libraries (sqlite-vec, SpeechBrain, Unsloth)
+- Hardware-specific techniques (TFLite INT8 on Cortex-M4, CAN FD)
 
-WHEN TO SEARCH: niche algorithms, specific chip families, non-mainstream libraries, domain-specific techniques.
-
-WHEN NOT TO SEARCH:
-- Mainstream tools: Python, React, Docker, SQL, FastAPI, Redis, WebSocket, LangChain, PyTorch, HuggingFace
-- LLM providers: Groq, OpenAI, Gemini, Cerebras, NVIDIA NIM, Deepgram
-- Search/scraping tools: DuckDuckGo, Tavily, Jina, Selenium — these are search APIs
-- Generic concepts: RAG, LLM, REST API, microservices, CI/CD, MCP server, WebSocket streaming
-- The project's own architecture components (e.g. if resume describes ROAST, don't search for ROAST's tools)
-- Anything you already know well enough to evaluate
+DO NOT search for: DuckDuckGo, Groq, LangGraph, LangChain, FastAPI, Redis, WebSocket, \
+RAG, LLM, MCP, Docker, Python, React, PyTorch, HuggingFace, Deepgram, Tavily, \
+or any tool/concept you already know well.
 
 DIFFICULTY LEVELS (calibrate against {experience_level}):
 - tutorial: following a guide, no novel decisions
@@ -86,20 +109,20 @@ DIFFICULTY LEVELS (calibrate against {experience_level}):
 ROLE CONTEXT:
 {role_calibration}
 
-After searching, produce final JSON:
+Produce final JSON:
 {{
-  "project_evaluations": [{{
+  "project_evaluations": [{{\
     "name": "project name",
-    "what_it_proves": "specific capabilities demonstrated",
+    "what_it_proves": "specific capabilities",
     "difficulty_level": "tutorial|intermediate|advanced|exceptional",
-    "strongest_signal": "most impressive decision and WHY it shows engineering judgment",
-    "what_is_missing": "what would make this genuinely stronger",
+    "strongest_signal": "most impressive decision and WHY",
+    "what_is_missing": "what would make this stronger",
     "resume_vs_reality": "underselling|accurate|overselling — with rewritten bullet if underselling"
   }}],
-  "overall_technical_level": "honest 2-3 sentence assessment with percentile context",
-  "most_differentiated_signal": "what makes this candidate stand out and why it's rare",
-  "biggest_technical_gap": "what is genuinely missing for this role",
-  "communication_gap": "what is real but poorly communicated — include rewritten version",
+  "overall_technical_level": "honest 2-3 sentence assessment",
+  "most_differentiated_signal": "what makes this candidate stand out",
+  "biggest_technical_gap": "what is genuinely missing",
+  "communication_gap": "what is real but poorly communicated — rewritten version",
   "honest_summary": "2-3 sentences, no softening",
   "unverified_skills": ["skills listed but no project evidence"]
 }}"""
@@ -132,7 +155,7 @@ async def _run_agentic_loop(
     messages: list[dict],
     session_id: str,
 ) -> TechnicalDepthOutput:
-    MAX_TOOL_CALLS = 3
+    MAX_TOOL_CALLS = 2
     tool_call_count = 0
     searches_made = []
 
@@ -159,7 +182,6 @@ async def _run_agentic_loop(
             ] or None,
         })
 
-        # No tool calls — LLM is done
         if finish_reason == "stop" or not msg.tool_calls:
             data = extract_json(msg.content or "")
             output = _parse_output(data)
@@ -168,13 +190,24 @@ async def _run_agentic_loop(
                         tool_calls_made=tool_call_count, searches=searches_made)
             return output
 
-        # Execute tool calls
         for tool_call in msg.tool_calls:
             if tool_call.function.name != "search_web":
                 continue
-            tool_call_count += 1
+
             args = json.loads(tool_call.function.arguments)
             query = args.get("query", "")
+
+            # Block known-bad queries before wasting a DDG call
+            if _should_skip_search(query):
+                logger.info("tech_depth_search_skipped", query=query, session_id=session_id)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": f"Skipped — '{query}' is a well-known tool/concept, no lookup needed.",
+                })
+                continue
+
+            tool_call_count += 1
             searches_made.append(query)
             logger.info("tech_depth_search", query=query, call_num=tool_call_count, session_id=session_id)
 
@@ -185,14 +218,16 @@ async def _run_agentic_loop(
                 "content": result[:600] if result else "No results found.",
             })
 
-    # Hit MAX_TOOL_CALLS — force final
+    # Hit MAX_TOOL_CALLS — force final without tools
     messages.append({"role": "user", "content": (
         "Research complete. Write the full JSON evaluation now. "
-        "Include ALL fields with real content. Do not return null for any field."
+        "Include ALL fields. Do not return null for any field."
     )})
     response = await client.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=messages,  # type: ignore
+        tool_choice="none",  # explicitly disable tools for final call
+        tools=[SEARCH_TOOL],  # type: ignore
         max_tokens=3000,
         temperature=0.2,
     )
@@ -227,8 +262,8 @@ async def run_technical_depth_agent(
         {"role": "user", "content": (
             f"RESUME:\n{resume_text[:5000]}\n\n"
             f"TARGET: {role} at {company_type} in {market} ({experience_level})\n\n"
-            "Evaluate the technical depth. Search only for genuinely niche/unfamiliar tech. "
-            "When ready, produce the final JSON."
+            "Evaluate technical depth. Search only for genuinely niche/unfamiliar tech. "
+            "Produce the final JSON when ready."
         )},
     ]
 
@@ -237,7 +272,7 @@ async def run_technical_depth_agent(
     try:
         return await asyncio.wait_for(
             _run_agentic_loop(client, messages, session_id),
-            timeout=35.0,
+            timeout=40.0,
         )
     except asyncio.TimeoutError:
         logger.warning("tech_depth_timeout_falling_back", session_id=session_id)
@@ -251,17 +286,26 @@ async def _fallback_evaluation(
     resume_text: str, role: str, company_type: str,
     market: str, experience_level: str, session_id: str,
 ) -> TechnicalDepthOutput:
+    """Non-agentic fallback using llama-3.1-8b — no tool calling, no context issues."""
     from backend.agents.prompts.template import get_role_calibration
     role_calibration = get_role_calibration(role, company_type)
+    system = TECH_DEPTH_SYSTEM.format(
+        role=role, company_type=company_type, market=market,
+        experience_level=experience_level, role_calibration=role_calibration,
+    )
     messages = [
-        {"role": "system", "content": TECH_DEPTH_SYSTEM.format(
-            role=role, company_type=company_type, market=market,
-            experience_level=experience_level, role_calibration=role_calibration,
+        {"role": "system", "content": system},
+        {"role": "user", "content": (
+            f"RESUME:\n{resume_text[:5000]}\n\n"
+            "Evaluate technical depth based on your existing knowledge. "
+            "Return JSON only, no tool calls."
         )},
-        {"role": "user", "content": f"RESUME:\n{resume_text[:5000]}\n\nEvaluate technical depth. Return JSON only."},
     ]
     try:
-        text, _ = await _call_agent(messages, max_tokens=2000, temperature=0.2, session_id=session_id)
+        text, _ = await groq_chat(
+            messages=messages, model="llama-3.1-8b-instant",
+            max_tokens=2000, temperature=0.2, session_id=session_id,
+        )
         return _parse_output(extract_json(text))
     except Exception as e:
         logger.error("tech_depth_fallback_failed", error=str(e), session_id=session_id)

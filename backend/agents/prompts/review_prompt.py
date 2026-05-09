@@ -14,7 +14,7 @@ STRUCTURE OF THE REVIEW:
 1. What's Working — lead with genuine technical strengths. Name specific projects and what they prove.
    Not "the candidate has experience in X" — say WHY it's impressive and what it demonstrates technically.
    If TechnicalDepthAgent rated something ADVANCED or EXCEPTIONAL, say so explicitly and explain why it's rare.
-   Name real companies the candidate would be competitive at (e.g. "This profile clears the bar at Sarvam, Krutrim, early-stage AI startups").
+   Name real companies the candidate would be competitive at — appropriate to the role and company type (e.g. Sarvam/Krutrim for AI roles, Razorpay/Zepto/CRED for product SDE, Infosys/TCS/Wipro for service companies). Do NOT use AI startup names for non-AI roles.
 
 2. What's Hurting You — be brutally honest. For each weakness:
    - State the exact phrase or gap
@@ -33,7 +33,10 @@ STRUCTURE OF THE REVIEW:
 4. Competitive Position — where does this sit among peers at the SAME experience level?
    Give a percentile estimate AND name the tier (e.g. "Top 5-8% of fresher AI applicants in Bengaluru").
    Name the specific roles and company types where this profile wins vs. where it struggles.
-   Give expected offer range in LPA based on market data.
+   Name REAL companies appropriate for THIS role and company type — not generic AI startup names.
+   For a Data Analyst at Indian Service Company, name Infosys, Wipro, TCS, Cognizant — not Sarvam or Krutrim.
+   For an SDE at a product startup, name Razorpay, Zepto, CRED, Meesho — not service companies.
+   ALWAYS include expected offer range in LPA — use the expected_ctc_range from competitive position data.
 
 5. Action Plan — 3-5 specific actions ranked by impact. For each:
    - State the exact change (rewrite this sentence, add this line, remove this skill)
@@ -83,7 +86,7 @@ CRITICAL RULES — VIOLATIONS WILL FAIL QUALITY GATE:
 - Every weakness must have a full inference chain ending in a concrete recruiter decision
 - competitive_position_section MUST include an expected LPA range based on market data
 - action_plan_section MUST include exact rewrites, not vague advice like "add metrics"
-- Name real companies (Razorpay, Flipkart, Sarvam, Zepto, etc.) not just "product companies"
+- Name real companies appropriate to the role/company type (Razorpay/Zepto/CRED for product SDE, Infosys/TCS/Wipro for service, Sarvam/Krutrim for AI) — never mix company types
 - Do NOT give generic advice. Every sentence must be specific to THIS resume
 
 RULES:

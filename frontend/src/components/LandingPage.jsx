@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, FileText, X, Flame, Sparkles } from 'lucide-react'
+import { ChevronDown, FileText, X, Flame, Sparkles, ArrowRight, Zap, Target, BarChart2 } from 'lucide-react'
 import { sessionInit, submitAnalysis } from '../lib/api'
 
 // ── Roasting overlay ──────────────────────────────────────────────────────────
@@ -29,7 +29,6 @@ function RoastingOverlay() {
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"
       style={{ background: 'rgba(14,17,23,0.97)', backdropFilter: 'blur(12px)' }}
     >
-      {/* Flame burst */}
       <div className="relative mb-8">
         {[...Array(8)].map((_, i) => (
           <motion.div
@@ -40,8 +39,7 @@ function RoastingOverlay() {
             animate={{
               x: Math.cos((i / 8) * Math.PI * 2) * 48,
               y: Math.sin((i / 8) * Math.PI * 2) * 48,
-              opacity: 0,
-              scale: 0,
+              opacity: 0, scale: 0,
             }}
             transition={{ duration: 0.8, delay: i * 0.05, repeat: Infinity, repeatDelay: 0.4 }}
           />
@@ -54,44 +52,22 @@ function RoastingOverlay() {
           <Flame size={36} className="text-orange-400" />
         </motion.div>
       </div>
-
-      {/* Text lines */}
       <div className="text-center space-y-3">
-        <motion.h2
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-xl font-bold text-[--roast-text]"
-        >
-          🔥 Roasting...
-        </motion.h2>
+        <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          className="text-xl font-bold text-[--roast-text]">🔥 Roasting...</motion.h2>
         <div className="h-6">
           <AnimatePresence mode="wait">
-            <motion.p
-              key={lineIdx}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.25 }}
-              className="text-sm text-[--roast-muted] font-mono"
-            >
-              {ROAST_LINES[lineIdx]}
-            </motion.p>
+            <motion.p key={lineIdx} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }}
+              className="text-sm text-[--roast-muted] font-mono">{ROAST_LINES[lineIdx]}</motion.p>
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Progress dots */}
       <div className="flex gap-2 mt-8">
         {ROAST_LINES.map((_, i) => (
-          <motion.div
-            key={i}
-            className="h-1.5 rounded-full"
-            animate={{
-              width: i <= lineIdx ? 24 : 6,
-              backgroundColor: i <= lineIdx ? '#f97316' : '#2a3347',
-            }}
-            transition={{ duration: 0.3 }}
-          />
+          <motion.div key={i} className="h-1.5 rounded-full"
+            animate={{ width: i <= lineIdx ? 24 : 6, backgroundColor: i <= lineIdx ? '#f97316' : '#2a3347' }}
+            transition={{ duration: 0.3 }} />
         ))}
       </div>
     </motion.div>
@@ -99,31 +75,15 @@ function RoastingOverlay() {
 }
 
 const ROLES = [
-  'Software Engineer / Associate',
-  'SDE1',
-  'SDE2 / Senior SDE',
-  'Full Stack Engineer',
-  'Backend Engineer',
-  'Embedded Systems Engineer',
-  'VLSI Design Engineer',
-  'Data Analyst',
-  'Data Scientist',
-  'Data Engineer',
-  'AI/ML Engineer',
-  'AI Engineer',
-  'DevOps / SRE',
-  'Product Manager',
-  'Business Analyst',
+  'Software Engineer / Associate', 'SDE1', 'SDE2 / Senior SDE',
+  'Full Stack Engineer', 'Backend Engineer', 'Embedded Systems Engineer',
+  'VLSI Design Engineer', 'Data Analyst', 'Data Scientist', 'Data Engineer',
+  'AI/ML Engineer', 'AI Engineer', 'DevOps / SRE', 'Product Manager', 'Business Analyst',
 ]
 
 const COMPANY_TYPES = [
-  'Indian Product Company',
-  'Indian Service Company',
-  'FAANG / Big Tech',
-  'Startup',
-  'Consulting / IB',
-  'Semiconductor / Hardware',
-  'MNC India (Non-FAANG)',
+  'Indian Product Company', 'Indian Service Company', 'FAANG / Big Tech',
+  'Startup', 'Consulting / IB', 'Semiconductor / Hardware', 'MNC India (Non-FAANG)',
 ]
 
 const MARKETS = ['India', 'USA', 'UAE', 'Singapore', 'UK']
@@ -132,25 +92,15 @@ const EXPERIENCE_LEVELS = [
   'Student / Fresher', 'Junior', 'Mid-level', 'Senior', 'Staff / Principal',
 ]
 
-const WORDS = [
-  { text: 'Your resume.', className: 'text-[--roast-text]' },
-  { text: 'Destroyed.', className: 'text-destroyed' },
-  { text: 'Improved.', className: 'text-[--roast-text]' },
+// ── What you get strip ────────────────────────────────────────────────────────
+
+const FEATURES = [
+  { icon: Zap,      label: 'Shortlist verdict',    desc: 'Pass or fail at named companies' },
+  { icon: Target,   label: 'Red flag scan',         desc: 'Every phrase that kills your chances' },
+  { icon: BarChart2, label: 'Percentile + CTC',     desc: 'Where you stand vs real applicants' },
 ]
 
-function HeadlineWord({ word, delay }) {
-  return (
-    <motion.span
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={`inline-block mr-3 ${word.className}`}
-      style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-    >
-      {word.text}
-    </motion.span>
-  )
-}
+// ── Drop zone ─────────────────────────────────────────────────────────────────
 
 function DropZone({ onFile }) {
   const [file, setFile] = useState(null)
@@ -180,7 +130,7 @@ function DropZone({ onFile }) {
   return (
     <div
       className={`dropzone cursor-pointer ${dragging ? 'dragging' : ''} ${file ? 'has-file' : ''}`}
-      style={{ padding: '36px 24px' }}
+      style={{ padding: file ? '20px 24px' : '32px 24px' }}
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
@@ -190,32 +140,34 @@ function DropZone({ onFile }) {
         onChange={(e) => handleFile(e.target.files[0])} />
 
       {file ? (
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
-            <FileText size={16} className="text-orange-400" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+              <FileText size={16} className="text-orange-400" />
+            </div>
+            <div className="text-left min-w-0">
+              <p className="text-sm text-[--roast-text] font-medium truncate max-w-[180px] sm:max-w-xs">{file.name}</p>
+              <p className="text-xs text-[--roast-muted]">{(file.size / 1024).toFixed(0)} KB · PDF ready</p>
+            </div>
           </div>
-          <div className="text-left min-w-0">
-            <p className="text-sm text-[--roast-text] font-medium truncate max-w-xs">{file.name}</p>
-            <p className="text-xs text-[--roast-muted]">{(file.size / 1024).toFixed(0)} KB · PDF</p>
-          </div>
-          <button onClick={clear} className="text-[--roast-placeholder] hover:text-[--roast-text] transition-colors ml-2 shrink-0">
-            <X size={15} />
+          <button onClick={clear} className="text-[--roast-placeholder] hover:text-[--roast-text] transition-colors shrink-0 p-1">
+            <X size={14} />
           </button>
         </div>
       ) : (
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3">
           <div className="flex justify-center">
             <motion.div
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center"
+              className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center"
             >
-              <Flame size={26} className="text-orange-400" />
+              <Flame size={22} className="text-orange-400" />
             </motion.div>
           </div>
           <div>
             <p className="text-sm font-semibold text-[--roast-text-2]">Drop your resume here</p>
-            <p className="text-xs text-[--roast-placeholder] mt-1">PDF only · Max 5MB · Click to browse</p>
+            <p className="text-xs text-[--roast-placeholder] mt-0.5">PDF only · Max 5MB · Click to browse</p>
           </div>
         </div>
       )}
@@ -232,16 +184,14 @@ function AutoTextarea({ value, onChange, placeholder, maxLength, rows = 3 }) {
     }
   }, [value])
   return (
-    <textarea
-      ref={ref}
-      value={value}
+    <textarea ref={ref} value={value}
       onChange={e => onChange(e.target.value.slice(0, maxLength))}
-      placeholder={placeholder}
-      rows={rows}
-      className="roast-input auto-expand w-full px-4 py-3 text-sm"
-    />
+      placeholder={placeholder} rows={rows}
+      className="roast-input auto-expand w-full px-4 py-3 text-sm" />
   )
 }
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function LandingPage({ onAnalysisStarted }) {
   const [file, setFile] = useState(null)
@@ -318,168 +268,192 @@ export function LandingPage({ onAnalysisStarted }) {
         {roasting && <RoastingOverlay />}
       </AnimatePresence>
 
-      <div className="min-h-[calc(100vh-52px)] flex flex-col items-center justify-center px-4 py-16 relative z-10">
-      <div className="w-full max-w-lg space-y-8">
+      <div className="min-h-[calc(100vh-52px)] flex flex-col items-center justify-center px-4 py-10 sm:py-16 relative z-10 overflow-x-hidden">
+        <div className="w-full max-w-lg space-y-6">
 
-        {/* Headline */}
-        <div className="relative headline-glow space-y-4 text-center sm:text-left">
+          {/* ── Headline ── */}
+          <div className="relative headline-glow space-y-3 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 font-medium"
+            >
+              <Sparkles size={11} />
+              {isReferred ? 'Someone shared their roast' : 'Live market data · 6 AI agents · Free'}
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]"
+            >
+              {isReferred ? (
+                <>Get your resume<br /><span className="text-destroyed">roasted free.</span></>
+              ) : (
+                <>Your resume.<br /><span className="text-destroyed">Destroyed.</span> Improved.</>
+              )}
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.4 }}
+              className="text-[--roast-muted] text-sm sm:text-base leading-relaxed max-w-sm mx-auto"
+            >
+              Brutally honest feedback calibrated to live hiring data —
+              not generic tips from a chatbot.
+            </motion.p>
+          </div>
+
+          {/* ── Feature strip ── */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 font-medium mb-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.4 }}
+            className="grid grid-cols-3 gap-2"
           >
-            <Sparkles size={11} />
-            Live market intelligence · 6 AI agents · Free
+            {FEATURES.map(({ icon: Icon, label, desc }) => (
+              <div key={label} className="flex flex-col items-center text-center gap-1.5 px-2 py-3 rounded-xl bg-[--roast-surface] border border-[--roast-border]">
+                <Icon size={14} className="text-orange-400" />
+                <p className="text-xs font-semibold text-[--roast-text-2] leading-tight">{label}</p>
+                <p className="text-[10px] text-[--roast-placeholder] leading-tight hidden sm:block">{desc}</p>
+              </div>
+            ))}
           </motion.div>
 
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
-            {isReferred ? (
-              <motion.span initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                Someone shared their roast.{' '}
-                <span className="text-destroyed">Get yours free.</span>
+          {/* ── Drop zone ── */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>
+            <DropZone onFile={setFile} />
+          </motion.div>
+
+          {/* ── Selects ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+            className="grid grid-cols-2 gap-2.5"
+          >
+            {[
+              { value: experienceLevel, onChange: v => { setExperienceLevel(v); setRole('') }, options: EXPERIENCE_LEVELS, placeholder: 'Experience level' },
+              { value: role, onChange: setRole, options: ROLES, placeholder: 'Target role' },
+              { value: companyType, onChange: setCompanyType, options: COMPANY_TYPES, placeholder: 'Company type' },
+              { value: market, onChange: setMarket, options: MARKETS, placeholder: 'Target market' },
+            ].map(({ value, onChange, options, placeholder }) => (
+              <select key={placeholder} value={value} onChange={e => onChange(e.target.value)}
+                className={`roast-select px-3 py-2.5 text-sm w-full ${!value ? 'unselected' : ''}`}>
+                <option value="">{placeholder}</option>
+                {options.map(o => <option key={o}>{o}</option>)}
+              </select>
+            ))}
+          </motion.div>
+
+          {/* ── Optional context ── */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55, duration: 0.4 }}>
+            <button
+              onClick={() => setShowContext(v => !v)}
+              className="flex items-center gap-2 text-xs text-[--roast-muted] hover:text-[--roast-text] transition-colors"
+            >
+              <motion.span animate={{ rotate: showContext ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown size={13} />
               </motion.span>
-            ) : (
-              WORDS.map((w, i) => <HeadlineWord key={i} word={w} delay={i * 0.15} />)
-            )}
-          </h1>
+              Add context · JD · GitHub (optional)
+            </button>
 
-          <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.4 }}
-            className="text-[--roast-muted] text-base leading-relaxed"
-          >
-            The brutal honest feedback your well-meaning friends won't give you.
-            Calibrated to live market data, not training data.
-          </motion.p>
-        </div>
-
-        {/* Dropzone */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.4 }}>
-          <DropZone onFile={setFile} />
-        </motion.div>
-
-        {/* Selects */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.4 }}
-          className="grid grid-cols-2 gap-3">
-          {[
-            { value: experienceLevel, onChange: v => { setExperienceLevel(v); setRole('') }, options: EXPERIENCE_LEVELS, placeholder: 'Experience Level' },
-            { value: role, onChange: setRole, options: ROLES, placeholder: 'Target Role' },
-            { value: companyType, onChange: setCompanyType, options: COMPANY_TYPES, placeholder: 'Company Type' },
-            { value: market, onChange: setMarket, options: MARKETS, placeholder: 'Target Market' },
-          ].map(({ value, onChange, options, placeholder }) => (
-            <select key={placeholder} value={value} onChange={e => onChange(e.target.value)}
-              className={`roast-select px-4 py-3 text-sm w-full ${!value ? 'unselected' : ''}`}>
-              <option value="">{placeholder}</option>
-              {options.map(o => <option key={o}>{o}</option>)}
-            </select>
-          ))}
-        </motion.div>
-
-        {/* Optional context */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7, duration: 0.4 }}>
-          <button
-            onClick={() => setShowContext(v => !v)}
-            className="flex items-center gap-2 text-sm text-[--roast-muted] hover:text-[--roast-text] transition-colors"
-          >
-            <motion.span animate={{ rotate: showContext ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              <ChevronDown size={14} />
-            </motion.span>
-            Add context (optional)
-          </button>
-
-          <div className={`accordion-content ${showContext ? 'open' : ''} mt-3`}>
-            <div className="accordion-inner space-y-3">
-              <AutoTextarea value={userContext} onChange={setUserContext}
-                placeholder="Anything we should know? e.g. career gap reason, location constraint, available to join immediately"
-                maxLength={500} />
-              <AutoTextarea value={jdText} onChange={setJdText}
-                placeholder="Targeting a specific role? Drop the JD here — review calibrates to this exact position."
-                maxLength={2000} rows={3} />
-              <input value={githubUrl} onChange={e => setGithubUrl(e.target.value)}
-                placeholder="GitHub URL (optional)"
-                className="roast-input w-full px-4 py-3 text-sm" />
+            <div className={`accordion-content ${showContext ? 'open' : ''} mt-3`}>
+              <div className="accordion-inner space-y-2.5">
+                <AutoTextarea value={userContext} onChange={setUserContext}
+                  placeholder="Anything we should know? e.g. career gap reason, location constraint, available to join immediately"
+                  maxLength={500} />
+                <AutoTextarea value={jdText} onChange={setJdText}
+                  placeholder="Paste a JD here — the review calibrates to this exact role."
+                  maxLength={2000} rows={3} />
+                <input value={githubUrl} onChange={e => setGithubUrl(e.target.value)}
+                  placeholder="GitHub URL (optional)"
+                  className="roast-input w-full px-4 py-2.5 text-sm" />
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Consent */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.4 }}
-          className="space-y-2.5">
-          {[
-            { checked: consent, onChange: setConsent, label: 'Your resume is processed by third-party AI providers for analysis. It is never stored by ROAST.' },
-            { checked: optedIn, onChange: setOptedIn, label: 'Contribute anonymised signals to improve competitive positioning for everyone. No resume content, no personal data.' },
-          ].map(({ checked, onChange, label }) => (
-            <label key={label} className="consent-row flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}
-                className="roast-checkbox mt-0.5 shrink-0" />
-              <span className="text-xs text-[--roast-muted] leading-relaxed">{label}</span>
-            </label>
-          ))}
-        </motion.div>
+          {/* ── Consent ── */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 0.4 }}
+            className="space-y-2">
+            {[
+              { checked: consent, onChange: setConsent, label: 'Your resume is processed by third-party AI providers for analysis. It is never stored by ROAST.' },
+              { checked: optedIn, onChange: setOptedIn, label: 'Contribute anonymised signals to improve competitive positioning for everyone. No resume content, no personal data.' },
+            ].map(({ checked, onChange, label }) => (
+              <label key={label} className="consent-row flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}
+                  className="roast-checkbox mt-0.5 shrink-0" />
+                <span className="text-xs text-[--roast-muted] leading-relaxed">{label}</span>
+              </label>
+            ))}
+          </motion.div>
 
-        {/* Error */}
-        <AnimatePresence>
-          {error && (
-            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="text-sm text-red-400 bg-red-500/8 border border-red-500/20 rounded-xl px-4 py-3">
-              {error}
-            </motion.p>
-          )}
-        </AnimatePresence>
-
-        {/* Submit */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.4 }}>
-          <motion.button
-            whileTap={canSubmit && !loading ? { scale: 0.97 } : {}}
-            onClick={handleSubmit}
-            disabled={!canSubmit || loading}
-            className="roast-btn w-full py-4 text-base flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin" />
-                Starting analysis...
-              </>
-            ) : (
-              <>
-                <Flame size={16} />
-                Roast my resume
-              </>
-            )}
-          </motion.button>
-          {!canSubmit && !loading && (
-            <p className="text-xs text-center text-[--roast-placeholder] mt-2">
-              {!file ? 'Drop a resume to get started' : !consent ? 'Accept the terms to continue' : 'Fill in all fields above'}
-            </p>
-          )}
-        </motion.div>
-
-        {/* Token */}
-        <div className="text-center">
-          <button onClick={() => setShowToken(v => !v)}
-            className="text-xs text-[--roast-placeholder] hover:text-[--roast-muted] transition-colors">
-            Have a token?
-          </button>
+          {/* ── Error ── */}
           <AnimatePresence>
-            {showToken && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-3">
-                <div className="flex gap-2">
-                  <input value={token} onChange={e => setToken(e.target.value)}
-                    placeholder="Enter your token"
-                    className="roast-input flex-1 px-4 py-2.5 text-sm" />
-                  <button className="px-4 py-2.5 bg-[--roast-surface-2] hover:bg-[--roast-surface] border border-[--roast-border] text-sm text-[--roast-text] rounded-xl transition-colors">
-                    Apply
-                  </button>
-                </div>
-              </motion.div>
+            {error && (
+              <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="text-sm text-red-400 bg-red-500/8 border border-red-500/20 rounded-xl px-4 py-3">
+                {error}
+              </motion.p>
             )}
           </AnimatePresence>
-        </div>
 
+          {/* ── Submit ── */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.4 }}>
+            <motion.button
+              whileTap={canSubmit && !loading ? { scale: 0.97 } : {}}
+              onClick={handleSubmit}
+              disabled={!canSubmit || loading}
+              className="roast-btn w-full py-4 text-base flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin" />
+                  Starting analysis...
+                </>
+              ) : (
+                <>
+                  <Flame size={16} />
+                  Roast my resume
+                  {canSubmit && <ArrowRight size={15} className="ml-1 opacity-70" />}
+                </>
+              )}
+            </motion.button>
+            {!canSubmit && !loading && (
+              <p className="text-xs text-center text-[--roast-placeholder] mt-2">
+                {!file ? 'Drop a PDF to get started'
+                  : !consent ? 'Accept the terms to continue'
+                  : 'Fill in all four fields above'}
+              </p>
+            )}
+          </motion.div>
+
+          {/* ── Token ── */}
+          <div className="text-center">
+            <button onClick={() => setShowToken(v => !v)}
+              className="text-xs text-[--roast-placeholder] hover:text-[--roast-muted] transition-colors">
+              Have a token?
+            </button>
+            <AnimatePresence>
+              {showToken && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-3">
+                  <div className="flex gap-2">
+                    <input value={token} onChange={e => setToken(e.target.value)}
+                      placeholder="Enter your token"
+                      className="roast-input flex-1 min-w-0 px-4 py-2.5 text-sm" />
+                    <button className="shrink-0 px-4 py-2.5 bg-[--roast-surface-2] hover:bg-[--roast-surface] border border-[--roast-border] text-sm text-[--roast-text] rounded-xl transition-colors">
+                      Apply
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+        </div>
       </div>
-    </div>
     </>
   )
 }

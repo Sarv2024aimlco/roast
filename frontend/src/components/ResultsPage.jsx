@@ -41,9 +41,9 @@ function PercentileBar({ range, confidence }) {
 
   return (
     <div className="space-y-3">
-      <div className="text-2xl sm:text-3xl font-bold tracking-tight">
+      <div className="text-3xl sm:text-4xl font-bold tracking-tight">
         <span className="text-orange-400">{numericPart}</span>
-        {labelPart && <span className="text-[--roast-text-2] text-xl">{labelPart}</span>}
+        {labelPart && <span className="text-[--roast-text] text-xl font-medium">{labelPart}</span>}
       </div>
       <div className="percentile-bar">
         <motion.div
@@ -123,8 +123,8 @@ export function ResultsPage({ sections, sessionId, meta, analysisCount }) {
           transition={{ duration: 0.4 }}
           className="flex items-start justify-between gap-4 px-1"
         >
-          <div className="space-y-1">
-            <p className="text-xs text-[--roast-muted] uppercase tracking-widest font-mono">
+          <div className="space-y-1 min-w-0">
+            <p className="text-xs text-[--roast-muted] uppercase tracking-widest font-mono truncate">
               {meta.role} · {meta.companyType} · {meta.market}
             </p>
             <h1 className="text-2xl sm:text-3xl font-bold">Your Roast</h1>
@@ -138,7 +138,6 @@ export function ResultsPage({ sections, sessionId, meta, analysisCount }) {
 
         {/* TL;DR */}
         <Card delay={0.05}>
-          <SectionLabel>Bottom Line</SectionLabel>
           {review ? (
             <TLDRBlock review={review} />
           ) : (
@@ -148,7 +147,7 @@ export function ResultsPage({ sections, sessionId, meta, analysisCount }) {
 
         {/* Market Pulse */}
         <Card delay={0.1}>
-          <MarketPulse marketContext={marketContext} fullContext={null} loading={!marketContext} />
+          <MarketPulse marketContext={marketContext} fullContext={sections.market_intel || null} loading={!marketContext} />
         </Card>
 
         {/* The Review */}
@@ -167,6 +166,47 @@ export function ResultsPage({ sections, sessionId, meta, analysisCount }) {
               range={competitive.percentile_estimate?.range}
               confidence={competitive.percentile_estimate?.confidence}
             />
+
+            {/* CTC Range */}
+            {competitive.expected_ctc_range && (
+              <div className="mt-4 px-4 py-3 rounded-xl bg-orange-500/6 border border-orange-500/15">
+                <p className="text-xs text-[--roast-muted] mb-0.5">Expected offer range</p>
+                <p className="text-base font-semibold text-orange-300 font-mono">{competitive.expected_ctc_range}</p>
+              </div>
+            )}
+
+            <div className="h-px bg-[--roast-border] my-4" />
+
+            {/* Strengths vs pool */}
+            {competitive.strengths_vs_pool?.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <p className="text-xs text-[--roast-muted] uppercase tracking-wider">Edges over the pool</p>
+                <ul className="space-y-1.5">
+                  {competitive.strengths_vs_pool.map((s, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-[--roast-text-2]">
+                      <span className="text-emerald-400 mt-0.5 shrink-0">+</span>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Weaknesses vs pool */}
+            {competitive.weaknesses_vs_pool?.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <p className="text-xs text-[--roast-muted] uppercase tracking-wider">Where you fall behind</p>
+                <ul className="space-y-1.5">
+                  {competitive.weaknesses_vs_pool.map((w, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-[--roast-text-2]">
+                      <span className="text-red-400 mt-0.5 shrink-0">−</span>
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="h-px bg-[--roast-border] my-4" />
             <p className="text-sm text-[--roast-text-2] leading-relaxed">{competitive.highest_leverage_change}</p>
           </Card>

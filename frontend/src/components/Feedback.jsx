@@ -64,12 +64,12 @@ export function ThirdAnalysisUnlock() {
           onKeyDown={e => e.key === 'Enter' && send()}
           placeholder="your@email.com"
           type="email"
-          className="roast-input flex-1 px-3 py-2.5 text-sm"
+          className="roast-input flex-1 min-w-0 px-3 py-2.5 text-sm"
         />
         <button
           onClick={send}
           disabled={loading || !email}
-          className="roast-btn px-4 py-2.5 text-sm"
+          className="roast-btn shrink-0 px-4 py-2.5 text-sm"
         >
           {loading ? '...' : 'Send'}
         </button>

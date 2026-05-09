@@ -62,8 +62,8 @@ flowchart TD
     E --> G[MarketContextAgent\nGroq 8B]
     G --> H{Parallel Agents}
     H --> I[RedFlagAgent\nallam-2-7b]
-    H --> J[SixSecondAgent\nCerebras]
-    H --> K[CompetitiveAgent\nNVIDIA NIM]
+    H --> J[SixSecondAgent\nCerebras llama3.1-8b]
+    H --> K[CompetitiveAgent\nNVIDIA NIM llama-3.3-70b]
     H --> L[TechnicalDepthAgent\ngpt-oss-120b + DuckDuckGo]
     I & J & K & L --> M[ReviewAgent\nllama-4-scout primary]
     M --> N[WebSocket Stream]
@@ -178,14 +178,14 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 |---|---|---|---|
 | MarketContextAgent | llama-3.1-8b-instant | Groq | 14,400 RPD, fast synthesis |
 | RedFlagAgent | allam-2-7b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 7K RPD |
-| SixSecondAgent | gpt-oss-20b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 1K RPD |
-| CompetitiveAgent | qwen/qwen3-32b → llama-3.1-8b fallback | Groq | 60 RPM, highest on Groq |
+| SixSecondAgent | llama3.1-8b | Cerebras | 1M tok/day, spreads load off Groq |
+| CompetitiveAgent | llama-3.3-70b-instruct | NVIDIA NIM | 40 RPM, no daily cap |
 | TechnicalDepthAgent | gpt-oss-120b → llama-3.1-8b fallback | Groq | Frontier quality, 1K RPD |
 | ReviewAgent (primary) | llama-4-scout-17b | Groq | Best quality at 1K RPD |
 | ReviewAgent (fallback A) | llama-3.3-70b-versatile | Groq | 1K RPD |
 | ReviewAgent (fallback B) | qwen/qwen3-32b | Groq | 1K RPD, 60 RPM |
 | ReviewAgent (fallback C) | llama-3.1-8b-instant | Cerebras | 1M tok/day free |
-| ReviewAgent (fallback D) | Llama 3.1 Nemotron | NVIDIA NIM | 40 RPM, no daily cap |
+| ReviewAgent (fallback D) | llama-3.3-70b-instruct | NVIDIA NIM | 40 RPM, no daily cap |
 | ReviewAgent (fallback E) | gemma-4-26b | Gemini API | 1.5K RPD, last resort |
 | ReviewAgent (fallback F) | openrouter default | OpenRouter | 50 RPD, emergency only |
 
@@ -271,7 +271,14 @@ roast/
 │       ├── components/       # React components
 │       ├── hooks/            # useWebSocket, useInferenceToggle
 │       └── lib/api.js        # All API calls
-└── scripts/
+├── tests/
+│   ├── test_config.py
+│   ├── test_pdf_reader.py
+│   ├── test_phase1.py
+│   ├── test_rate_limit.py
+│   ├── test_session_store.py
+│   └── test_tavily_client.py
+├── scripts/
     └── prepopulate.py        # Pre-populate SQLite before launch
 ```
 
@@ -335,6 +342,8 @@ Open `http://localhost:5173`
 # LLM Providers (comma-separated for key rotation)
 GROQ_API_KEYS=your_groq_key
 GEMINI_API_KEYS=your_gemini_key
+CEREBRAS_API_KEY=your_cerebras_key
+NVIDIA_NIM_API_KEY=your_nvidia_nim_key
 OPENROUTER_API_KEY=your_openrouter_key
 
 # Search
@@ -355,6 +364,10 @@ RESEND_API_KEY=your_resend_key
 # Observability
 LANGFUSE_PUBLIC_KEY=your_langfuse_public_key
 LANGFUSE_SECRET_KEY=your_langfuse_secret_key
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+
+# Notifications
+DISCORD_WEBHOOK_URL=
 
 # Security
 HMAC_SECRET=your_hmac_secret
@@ -384,6 +397,8 @@ HMAC_SECRET=your_hmac_secret
 | `POST` | `/followup` | FollowUpAgent — one per section per session |
 | `POST` | `/feedback` | Useful/not useful vote |
 | `POST` | `/token` | Request third-analysis email token |
+| `POST` | `/token/verify` | Verify token, unlock extra analysis |
+| `GET` | `/session/{id}` | Raw session data |
 | `POST` | `/refresh-market-intel` | QStash cron trigger (HMAC verified) |
 | `GET` | `/health` | Liveness check |
 

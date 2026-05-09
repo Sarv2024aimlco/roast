@@ -4,6 +4,7 @@ from backend.agents.schemas import JDRequirements, MarketContextOutput
 from backend.agents.prompts.template import build_system_prompt
 from backend.agents.prompts.market_context_prompt import VERSIONS as MC_VERSIONS, ACTIVE as MC_ACTIVE
 from backend.llm.router import call_groq_8b
+from backend.agents.json_utils import extract_json
 
 logger = structlog.get_logger()
 
@@ -111,22 +112,28 @@ Produce the MarketContextOutput JSON."""
             messages, max_tokens=1000, temperature=0.1, session_id=session_id
         )
 
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.strip()
-
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            text = text[start:end]
-
-        data = json.loads(text)
+        data = extract_json(text)
 
         # Coerce format_expectations to string if model returned a dict
         if isinstance(data.get("format_expectations"), dict):
             data["format_expectations"] = json.dumps(data["format_expectations"])
+
+        # Coerce None/missing string fields to safe defaults
+        for field, default in [
+            ("competitive_pool_description", "Competitive pool data unavailable"),
+            ("market_norms", ""),
+            ("format_expectations", ""),
+            ("live_context_summary", ""),
+        ]:
+            if not data.get(field):
+                data[field] = default
+        if not isinstance(data.get("red_flag_triggers"), list):
+            data["red_flag_triggers"] = []
+        if not isinstance(data.get("weight_map"), dict):
+            data["weight_map"] = {
+                "dsa": 0.7, "projects": 0.7, "cgpa": 0.5,
+                "experience": 0.7, "open_source": 0.4, "college_tier": 0.4
+            }
 
         # Inject JD requirements into output if provided
         if jd_requirements:

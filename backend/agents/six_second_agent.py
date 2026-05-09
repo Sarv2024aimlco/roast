@@ -5,6 +5,7 @@ from backend.agents.prompts.template import build_system_prompt
 from backend.agents.prompts.six_second_prompt import VERSIONS as SS_VERSIONS, ACTIVE as SS_ACTIVE
 from backend.agents.schemas import MarketContextOutput
 from backend.llm.router import call_six_second_agent as _call_agent
+from backend.agents.json_utils import extract_json
 
 logger = structlog.get_logger()
 
@@ -68,19 +69,7 @@ Produce the SixSecondAndTrajectory JSON output.""",
             messages, max_tokens=1500, temperature=0.2, session_id=session_id
         )
 
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.strip()
-
-        # Extract JSON object even if there's extra text around it
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            text = text[start:end]
-
-        data = json.loads(text)
+        data = extract_json(text)
 
         # Parse gaps as GapSignal objects
         gaps = [GapSignal(**g) for g in data.get("gaps", [])]

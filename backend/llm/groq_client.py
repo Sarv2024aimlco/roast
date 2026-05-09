@@ -112,6 +112,16 @@ async def groq_chat(
 
             text = response.choices[0].message.content.strip()
 
+            # qwen3 thinking mode outputs <think>...</think> before JSON
+            # If </think> is present, take everything after it
+            # If only <think> is present (truncated), strip from start to first }
+            if "</think>" in text:
+                text = text[text.index("</think>") + len("</think>"):].strip()
+            elif text.startswith("<think>"):
+                # thinking block got truncated by max_tokens — no JSON was produced
+                # raise so the retry/fallback chain kicks in
+                raise RuntimeError("qwen3_thinking_truncated")
+
             # Track RPD
             _increment_rpd(model, key_idx)
 

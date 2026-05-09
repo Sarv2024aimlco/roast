@@ -178,7 +178,7 @@ Write the complete review JSON.""",
         try:
             text, meta = await call_review_agent(
                 messages=messages,
-                max_tokens=2000,
+                max_tokens=3000,
                 session_id=session_id,
             )
 

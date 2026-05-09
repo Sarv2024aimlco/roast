@@ -23,7 +23,7 @@ REVIEW_MODEL_CHAIN = [
 
 async def call_review_agent(
     messages: list[dict],
-    max_tokens: int = 1500,
+    max_tokens: int = 3000,
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
@@ -168,26 +168,27 @@ async def call_six_second_agent(
 
 async def call_competitive_agent(
     messages: list[dict],
-    max_tokens: int = 1000,
+    max_tokens: int = 1500,
     temperature: float = 0.2,
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
-    CompetitiveAgent uses NVIDIA NIM — 40 RPM, no daily cap.
-    Falls back to Groq qwen3-32b (60 RPM combined across 2 keys).
+    CompetitiveAgent uses qwen3-32b on Groq — 60 RPM combined, separate bucket.
+    max_tokens=1500 to cover ~400 tok thinking block + ~400 tok JSON output.
+    Falls back to NIM if Groq exhausted.
     """
     try:
-        return await nim_chat(
+        return await groq_chat(
             messages=messages,
+            model="qwen/qwen3-32b",
             max_tokens=max_tokens,
             temperature=temperature,
             session_id=session_id,
         )
     except Exception as e:
-        logger.warning("competitive_nim_failed_falling_back", error=str(e), session_id=session_id)
-        return await groq_chat(
+        logger.warning("competitive_groq_failed_falling_back", error=str(e), session_id=session_id)
+        return await nim_chat(
             messages=messages,
-            model="llama-3.1-8b-instant",
             max_tokens=max_tokens,
             temperature=temperature,
             session_id=session_id,

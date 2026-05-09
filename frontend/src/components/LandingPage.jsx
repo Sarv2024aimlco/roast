@@ -1,24 +1,126 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, FileText, X, Flame } from 'lucide-react'
+import { ChevronDown, FileText, X, Flame, Sparkles } from 'lucide-react'
 import { sessionInit, submitAnalysis } from '../lib/api'
 
-const ROLES = [
-  'SDE1', 'SDE2', 'Senior SDE', 'Full Stack Engineer', 'Backend Engineer',
-  'Embedded Systems Engineer', 'VLSI Design Engineer',
-  'Data Analyst', 'Data Scientist', 'Data Engineer',
-  'ML Engineer', 'AI Engineer',
-  'DevOps / SRE', 'Product Manager', 'Business Analyst',
+// ── Roasting overlay ──────────────────────────────────────────────────────────
+
+const ROAST_LINES = [
+  'Feeding your resume to the flames...',
+  'Summoning 6 AI agents...',
+  'Pulling live market data...',
+  'No mercy mode: ON',
 ]
-const ROLES_2PLUS = [...ROLES, 'ML/AI Engineer']
+
+function RoastingOverlay() {
+  const [lineIdx, setLineIdx] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setLineIdx(i => Math.min(i + 1, ROAST_LINES.length - 1)), 600)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+      style={{ background: 'rgba(14,17,23,0.97)', backdropFilter: 'blur(12px)' }}
+    >
+      {/* Flame burst */}
+      <div className="relative mb-8">
+        {[...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1.5 h-1.5 rounded-full bg-orange-400"
+            style={{ top: '50%', left: '50%' }}
+            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+            animate={{
+              x: Math.cos((i / 8) * Math.PI * 2) * 48,
+              y: Math.sin((i / 8) * Math.PI * 2) * 48,
+              opacity: 0,
+              scale: 0,
+            }}
+            transition={{ duration: 0.8, delay: i * 0.05, repeat: Infinity, repeatDelay: 0.4 }}
+          />
+        ))}
+        <motion.div
+          animate={{ scale: [1, 1.15, 1], rotate: [0, -5, 5, 0] }}
+          transition={{ duration: 0.6, repeat: Infinity }}
+          className="w-20 h-20 rounded-3xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center"
+        >
+          <Flame size={36} className="text-orange-400" />
+        </motion.div>
+      </div>
+
+      {/* Text lines */}
+      <div className="text-center space-y-3">
+        <motion.h2
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-xl font-bold text-[--roast-text]"
+        >
+          🔥 Roasting...
+        </motion.h2>
+        <div className="h-6">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={lineIdx}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              className="text-sm text-[--roast-muted] font-mono"
+            >
+              {ROAST_LINES[lineIdx]}
+            </motion.p>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Progress dots */}
+      <div className="flex gap-2 mt-8">
+        {ROAST_LINES.map((_, i) => (
+          <motion.div
+            key={i}
+            className="h-1.5 rounded-full"
+            animate={{
+              width: i <= lineIdx ? 24 : 6,
+              backgroundColor: i <= lineIdx ? '#f97316' : '#2a3347',
+            }}
+            transition={{ duration: 0.3 }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
+const ROLES = [
+  'Software Engineer / Associate',
+  'SDE1',
+  'SDE2 / Senior SDE',
+  'Full Stack Engineer',
+  'Backend Engineer',
+  'Embedded Systems Engineer',
+  'VLSI Design Engineer',
+  'Data Analyst',
+  'Data Scientist',
+  'Data Engineer',
+  'AI/ML Engineer',
+  'AI Engineer',
+  'DevOps / SRE',
+  'Product Manager',
+  'Business Analyst',
+]
 
 const COMPANY_TYPES = [
-  'Indian Product Company (Tier 1)',
-  'Indian Product Company (Tier 2)',
+  'Indian Product Company',
   'Indian Service Company',
   'FAANG / Big Tech',
-  'Early Stage Startup',
-  'Growth Stage Startup',
+  'Startup',
   'Consulting / IB',
   'Semiconductor / Hardware',
   'MNC India (Non-FAANG)',
@@ -30,21 +132,18 @@ const EXPERIENCE_LEVELS = [
   'Student / Fresher', 'Junior', 'Mid-level', 'Senior', 'Staff / Principal',
 ]
 
-const TWO_PLUS = ['Mid-level', 'Senior', 'Staff / Principal']
-
-// Staggered headline words
 const WORDS = [
-  { text: 'Your resume.', className: 'text-zinc-100' },
+  { text: 'Your resume.', className: 'text-[--roast-text]' },
   { text: 'Destroyed.', className: 'text-destroyed' },
-  { text: 'Improved.', className: 'text-zinc-100' },
+  { text: 'Improved.', className: 'text-[--roast-text]' },
 ]
 
 function HeadlineWord({ word, delay }) {
   return (
     <motion.span
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
       className={`inline-block mr-3 ${word.className}`}
       style={{ fontFamily: 'Space Grotesk, sans-serif' }}
     >
@@ -80,7 +179,8 @@ function DropZone({ onFile }) {
 
   return (
     <div
-      className={`dropzone p-8 text-center cursor-pointer ${dragging ? 'dragging' : ''} ${file ? 'has-file' : ''}`}
+      className={`dropzone cursor-pointer ${dragging ? 'dragging' : ''} ${file ? 'has-file' : ''}`}
+      style={{ padding: '36px 24px' }}
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
@@ -91,22 +191,31 @@ function DropZone({ onFile }) {
 
       {file ? (
         <div className="flex items-center justify-center gap-3">
-          <FileText size={18} className="text-orange-500 shrink-0" />
-          <span className="text-sm text-zinc-300 truncate max-w-xs">{file.name}</span>
-          <button onClick={clear} className="text-zinc-600 hover:text-zinc-300 transition-colors ml-1">
+          <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+            <FileText size={16} className="text-orange-400" />
+          </div>
+          <div className="text-left min-w-0">
+            <p className="text-sm text-[--roast-text] font-medium truncate max-w-xs">{file.name}</p>
+            <p className="text-xs text-[--roast-muted]">{(file.size / 1024).toFixed(0)} KB · PDF</p>
+          </div>
+          <button onClick={clear} className="text-[--roast-placeholder] hover:text-[--roast-text] transition-colors ml-2 shrink-0">
             <X size={15} />
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-xl bg-zinc-800/60 flex items-center justify-center">
-              <Flame size={22} className="text-orange-500" />
-            </div>
+            <motion.div
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center"
+            >
+              <Flame size={26} className="text-orange-400" />
+            </motion.div>
           </div>
           <div>
-            <p className="text-sm text-zinc-300 font-medium">Drop your resume here</p>
-            <p className="text-xs text-zinc-600 mt-1">PDF only · Max 5MB · Click to browse</p>
+            <p className="text-sm font-semibold text-[--roast-text-2]">Drop your resume here</p>
+            <p className="text-xs text-[--roast-placeholder] mt-1">PDF only · Max 5MB · Click to browse</p>
           </div>
         </div>
       )}
@@ -116,14 +225,12 @@ function DropZone({ onFile }) {
 
 function AutoTextarea({ value, onChange, placeholder, maxLength, rows = 3 }) {
   const ref = useRef()
-
   useEffect(() => {
     if (ref.current) {
       ref.current.style.height = 'auto'
       ref.current.style.height = Math.min(ref.current.scrollHeight, 300) + 'px'
     }
   }, [value])
-
   return (
     <textarea
       ref={ref}
@@ -131,7 +238,7 @@ function AutoTextarea({ value, onChange, placeholder, maxLength, rows = 3 }) {
       onChange={e => onChange(e.target.value.slice(0, maxLength))}
       placeholder={placeholder}
       rows={rows}
-      className="roast-input auto-expand w-full px-3 py-2.5 text-sm"
+      className="roast-input auto-expand w-full px-4 py-3 text-sm"
     />
   )
 }
@@ -151,22 +258,21 @@ export function LandingPage({ onAnalysisStarted }) {
   const [consent, setConsent] = useState(false)
   const [optedIn, setOptedIn] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [roasting, setRoasting] = useState(false)
   const [error, setError] = useState('')
-
-  // Pre-create session on page load for timing gate
   const [sessionId, setSessionId] = useState(null)
+
   useEffect(() => {
     sessionInit({
-      role: 'SDE2', market: 'India',
-      company_type: 'Indian Product Company (Tier 1)',
-      experience_level: 'Junior',
+      role: 'SDE1', market: 'India',
+      company_type: 'Indian Product Company',
+      experience_level: 'Student / Fresher',
     }).then(s => setSessionId(s.session_id)).catch(() => {})
   }, [])
 
   const isReferred = new URLSearchParams(window.location.search).has('ref') ||
     window.location.search.includes('utm_')
 
-  const availableRoles = TWO_PLUS.includes(experienceLevel) ? ROLES_2PLUS : ROLES
   const canSubmit = file && role && companyType && market && experienceLevel && consent
 
   const handleSubmit = async () => {
@@ -174,37 +280,23 @@ export function LandingPage({ onAnalysisStarted }) {
     setLoading(true)
     setError('')
     try {
-      // Use pre-created session (satisfies timing gate)
-      // If not ready yet, create one now (timing gate may fire but user waited long enough)
       let sid = sessionId
       if (!sid) {
-        const session = await sessionInit({
-          role, market, company_type: companyType, experience_level: experienceLevel,
-        })
+        const session = await sessionInit({ role, market, company_type: companyType, experience_level: experienceLevel })
         sid = session.session_id
       }
-
-      await submitAnalysis({
-        sessionId: sid, file, role, company_type: companyType, market,
-        experience_level: experienceLevel, userContext, jdText, githubUrl,
-        optedInCorpus: optedIn,
-      })
+      await submitAnalysis({ sessionId: sid, file, role, company_type: companyType, market, experience_level: experienceLevel, userContext, jdText, githubUrl, optedInCorpus: optedIn })
+      setRoasting(true)
+      await new Promise(r => setTimeout(r, 2500))
       onAnalysisStarted(sid, { role, companyType, market, experienceLevel })
     } catch (e) {
-      console.error('Submit error:', e)
-      // If timing gate fired, create fresh session and retry once
-      if (e.message && e.message.includes('too fast')) {
+      if (e.message?.includes('too fast')) {
         try {
-          const session = await sessionInit({
-            role, market, company_type: companyType, experience_level: experienceLevel,
-          })
-          // Wait 4 seconds then retry
+          const session = await sessionInit({ role, market, company_type: companyType, experience_level: experienceLevel })
           await new Promise(r => setTimeout(r, 4000))
-          await submitAnalysis({
-            sessionId: session.session_id, file, role, company_type: companyType, market,
-            experience_level: experienceLevel, userContext, jdText, githubUrl,
-            optedInCorpus: optedIn,
-          })
+          await submitAnalysis({ sessionId: session.session_id, file, role, company_type: companyType, market, experience_level: experienceLevel, userContext, jdText, githubUrl, optedInCorpus: optedIn })
+          setRoasting(true)
+          await new Promise(r => setTimeout(r, 2500))
           onAnalysisStarted(session.session_id, { role, companyType, market, experienceLevel })
           return
         } catch (e2) {
@@ -221,15 +313,29 @@ export function LandingPage({ onAnalysisStarted }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-xl space-y-7">
+    <>
+      <AnimatePresence>
+        {roasting && <RoastingOverlay />}
+      </AnimatePresence>
+
+      <div className="min-h-[calc(100vh-52px)] flex flex-col items-center justify-center px-4 py-16 relative z-10">
+      <div className="w-full max-w-lg space-y-8">
 
         {/* Headline */}
-        <div className="relative headline-glow space-y-3">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+        <div className="relative headline-glow space-y-4 text-center sm:text-left">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 font-medium mb-2"
+          >
+            <Sparkles size={11} />
+            Live market intelligence · 6 AI agents · Free
+          </motion.div>
+
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
             {isReferred ? (
-              <motion.span initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}>
+              <motion.span initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                 Someone shared their roast.{' '}
                 <span className="text-destroyed">Get yours free.</span>
               </motion.span>
@@ -237,45 +343,44 @@ export function LandingPage({ onAnalysisStarted }) {
               WORDS.map((w, i) => <HeadlineWord key={i} word={w} delay={i * 0.15} />)
             )}
           </h1>
+
           <motion.p
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.4 }}
-            className="text-zinc-400 text-base"
+            className="text-[--roast-muted] text-base leading-relaxed"
           >
             The brutal honest feedback your well-meaning friends won't give you.
+            Calibrated to live market data, not training data.
           </motion.p>
         </div>
 
         {/* Dropzone */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.4 }}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.4 }}>
           <DropZone onFile={setFile} />
         </motion.div>
 
-        {/* Dropdowns */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.4 }}
+        {/* Selects */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.4 }}
           className="grid grid-cols-2 gap-3">
           {[
             { value: experienceLevel, onChange: v => { setExperienceLevel(v); setRole('') }, options: EXPERIENCE_LEVELS, placeholder: 'Experience Level' },
-            { value: role, onChange: setRole, options: availableRoles, placeholder: 'Target Role' },
+            { value: role, onChange: setRole, options: ROLES, placeholder: 'Target Role' },
             { value: companyType, onChange: setCompanyType, options: COMPANY_TYPES, placeholder: 'Company Type' },
             { value: market, onChange: setMarket, options: MARKETS, placeholder: 'Target Market' },
           ].map(({ value, onChange, options, placeholder }) => (
             <select key={placeholder} value={value} onChange={e => onChange(e.target.value)}
-              className={`roast-select px-3 py-2.5 text-sm w-full ${!value ? 'unselected' : ''}`}>
+              className={`roast-select px-4 py-3 text-sm w-full ${!value ? 'unselected' : ''}`}>
               <option value="">{placeholder}</option>
               {options.map(o => <option key={o}>{o}</option>)}
             </select>
           ))}
         </motion.div>
 
-        {/* Optional context accordion */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ delay: 0.9, duration: 0.4 }}>
+        {/* Optional context */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7, duration: 0.4 }}>
           <button
             onClick={() => setShowContext(v => !v)}
-            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="flex items-center gap-2 text-sm text-[--roast-muted] hover:text-[--roast-text] transition-colors"
           >
             <motion.span animate={{ rotate: showContext ? 180 : 0 }} transition={{ duration: 0.2 }}>
               <ChevronDown size={14} />
@@ -285,43 +390,30 @@ export function LandingPage({ onAnalysisStarted }) {
 
           <div className={`accordion-content ${showContext ? 'open' : ''} mt-3`}>
             <div className="accordion-inner space-y-3">
-              <AutoTextarea
-                value={userContext}
-                onChange={setUserContext}
+              <AutoTextarea value={userContext} onChange={setUserContext}
                 placeholder="Anything we should know? e.g. career gap reason, location constraint, available to join immediately"
-                maxLength={500}
-              />
-              <AutoTextarea
-                value={jdText}
-                onChange={setJdText}
+                maxLength={500} />
+              <AutoTextarea value={jdText} onChange={setJdText}
                 placeholder="Targeting a specific role? Drop the JD here — review calibrates to this exact position."
-                maxLength={2000}
-                rows={3}
-              />
-              <input
-                value={githubUrl}
-                onChange={e => setGithubUrl(e.target.value)}
+                maxLength={2000} rows={3} />
+              <input value={githubUrl} onChange={e => setGithubUrl(e.target.value)}
                 placeholder="GitHub URL (optional)"
-                className="roast-input w-full px-3 py-2.5 text-sm"
-              />
+                className="roast-input w-full px-4 py-3 text-sm" />
             </div>
           </div>
         </motion.div>
 
-        {/* Consent checkboxes */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ delay: 1.0, duration: 0.4 }}
+        {/* Consent */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.4 }}
           className="space-y-2.5">
           {[
             { checked: consent, onChange: setConsent, label: 'Your resume is processed by third-party AI providers for analysis. It is never stored by ROAST.' },
             { checked: optedIn, onChange: setOptedIn, label: 'Contribute anonymised signals to improve competitive positioning for everyone. No resume content, no personal data.' },
           ].map(({ checked, onChange, label }) => (
-            <label key={label} className="flex items-start gap-3 cursor-pointer group">
+            <label key={label} className="consent-row flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}
-                className="roast-checkbox mt-0.5" />
-              <span className="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors leading-relaxed">
-                {label}
-              </span>
+                className="roast-checkbox mt-0.5 shrink-0" />
+              <span className="text-xs text-[--roast-muted] leading-relaxed">{label}</span>
             </label>
           ))}
         </motion.div>
@@ -329,43 +421,55 @@ export function LandingPage({ onAnalysisStarted }) {
         {/* Error */}
         <AnimatePresence>
           {error && (
-            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-sm text-red-400 bg-red-400/8 border border-red-400/20 rounded-lg px-3 py-2">
+            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="text-sm text-red-400 bg-red-500/8 border border-red-500/20 rounded-xl px-4 py-3">
               {error}
             </motion.p>
           )}
         </AnimatePresence>
 
-        {/* Submit button */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1, duration: 0.4 }}>
+        {/* Submit */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.4 }}>
           <motion.button
             whileTap={canSubmit && !loading ? { scale: 0.97 } : {}}
             onClick={handleSubmit}
             disabled={!canSubmit || loading}
-            title={!file ? 'Drop a resume first.' : !consent ? 'Accept the terms first.' : ''}
-            className="roast-btn w-full py-4 text-base"
+            className="roast-btn w-full py-4 text-base flex items-center justify-center gap-2"
           >
-            {loading ? 'Starting analysis...' : '🔥 Roast me'}
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin" />
+                Starting analysis...
+              </>
+            ) : (
+              <>
+                <Flame size={16} />
+                Roast my resume
+              </>
+            )}
           </motion.button>
+          {!canSubmit && !loading && (
+            <p className="text-xs text-center text-[--roast-placeholder] mt-2">
+              {!file ? 'Drop a resume to get started' : !consent ? 'Accept the terms to continue' : 'Fill in all fields above'}
+            </p>
+          )}
         </motion.div>
 
-        {/* Token link */}
+        {/* Token */}
         <div className="text-center">
           <button onClick={() => setShowToken(v => !v)}
-            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
+            className="text-xs text-[--roast-placeholder] hover:text-[--roast-muted] transition-colors">
             Have a token?
           </button>
           <AnimatePresence>
             {showToken && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-2">
+                exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-3">
                 <div className="flex gap-2">
                   <input value={token} onChange={e => setToken(e.target.value)}
                     placeholder="Enter your token"
-                    className="roast-input flex-1 px-3 py-2 text-sm" />
-                  <button className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300 rounded-lg transition-colors">
+                    className="roast-input flex-1 px-4 py-2.5 text-sm" />
+                  <button className="px-4 py-2.5 bg-[--roast-surface-2] hover:bg-[--roast-surface] border border-[--roast-border] text-sm text-[--roast-text] rounded-xl transition-colors">
                     Apply
                   </button>
                 </div>
@@ -376,5 +480,6 @@ export function LandingPage({ onAnalysisStarted }) {
 
       </div>
     </div>
+    </>
   )
 }

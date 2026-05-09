@@ -11,9 +11,10 @@ _keys = [k.strip() for k in GEMINI_API_KEYS.split(",") if k.strip()]
 _current_index = 0
 
 # Model IDs
-GEMINI_FLASH_LITE = "gemini-2.5-flash-lite"           # breaking signal (verified working)
-GEMMA_27B = "gemini-2.5-flash-lite"                   # ReviewAgent fallback (verified working)
-GEMMA_4_26B = "gemma-4-26b-a4b-it"                   # ingestion only
+GEMINI_FLASH_LITE = "gemini-2.5-flash-lite"   # 159 tok/s, thinking disabled
+GEMINI_FLASH = "gemini-2.5-flash"             # 112 tok/s, thinking disabled
+GEMMA_4_26B = "gemma-4-26b-a4b-it"            # ingestion only
+GEMMA_27B = GEMINI_FLASH_LITE                  # alias used by router
 
 
 def _get_client() -> genai.Client:
@@ -44,12 +45,14 @@ async def gemini_chat(
     for attempt in range(3):
         try:
             client = _get_client()
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model=model,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=temperature,
                     max_output_tokens=max_tokens,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             )
 

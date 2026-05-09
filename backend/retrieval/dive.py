@@ -320,7 +320,7 @@ def _breaking_signal_key(role: str, company_type: str, market: str) -> str:
 def _role_to_category(role: str) -> str:
     """Map role to a broader category for breaking signal keying."""
     role_lower = role.lower()
-    if any(x in role_lower for x in ["sde", "full stack", "backend", "software"]):
+    if any(x in role_lower for x in ["sde", "full stack", "backend", "software engineer", "associate"]):
         return "sde"
     if any(x in role_lower for x in ["ml", "ai", "machine learning"]):
         return "ai_ml"

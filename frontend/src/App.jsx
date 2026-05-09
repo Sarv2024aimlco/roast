@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { Flame, ArrowLeft } from 'lucide-react'
 import { LandingPage } from './components/LandingPage'
 import { AnalysisProgress } from './components/AnalysisProgress'
 import { ResultsPage } from './components/ResultsPage'
 import { useWebSocket } from './hooks/useWebSocket'
 import './index.css'
 
-// Track analysis count in localStorage for third-analysis unlock
 function getAnalysisCount() {
   return parseInt(localStorage.getItem('roast_analysis_count') || '0')
 }
@@ -14,6 +14,75 @@ function incrementAnalysisCount() {
   const count = getAnalysisCount() + 1
   localStorage.setItem('roast_analysis_count', count)
   return count
+}
+
+function VisitorCounter() {
+  const [count, setCount] = useState(null)
+
+  useEffect(() => {
+    // Fetch total analyses from backend
+    fetch('/api/health')
+      .then(r => r.json())
+      .then(d => {
+        if (d.total_analyses) setCount(d.total_analyses)
+      })
+      .catch(() => {})
+  }, [])
+
+  if (!count) return null
+
+  return (
+    <div className="visitor-badge">
+      <span className="visitor-dot" />
+      <span>{count.toLocaleString()} roasts delivered</span>
+    </div>
+  )
+}
+
+function NavBar({ view, onBack }) {
+  return (
+    <nav className="roast-nav">
+      <div className="flex items-center gap-2">
+        <Flame size={16} className="text-orange-500" />
+        <span className="roast-logo">ROAST</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <VisitorCounter />
+        {view === 'analysis' && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-xs text-[--roast-muted] hover:text-[--roast-text] transition-colors"
+          >
+            <ArrowLeft size={13} />
+            New roast
+          </button>
+        )}
+      </div>
+    </nav>
+  )
+}
+
+function Footer() {
+  return (
+    <footer className="roast-footer">
+      <div className="max-w-2xl mx-auto space-y-2">
+        <p>
+          Built by{' '}
+          <a
+            href="https://linkedin.com/in/sarvesh-bhattacharyya-485360270"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-orange-400 hover:text-orange-300 transition-colors"
+          >
+            Sarvesh Bhattacharyya
+          </a>
+        </p>
+        <p className="text-[--roast-border-light]">
+          Your resume is never stored. Processed by third-party AI providers for analysis only.
+        </p>
+      </div>
+    </footer>
+  )
 }
 
 function AnalysisView({ sessionId, meta }) {
@@ -34,7 +103,7 @@ function AnalysisView({ sessionId, meta }) {
 }
 
 export default function App() {
-  const [view, setView] = useState('landing') // landing | analysis
+  const [view, setView] = useState('landing')
   const [sessionId, setSessionId] = useState(null)
   const [meta, setMeta] = useState(null)
 
@@ -47,44 +116,39 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--roast-bg)', color: 'var(--roast-text)' }}>
-      <AnimatePresence mode="wait">
-        {view === 'landing' && (
-          <motion.div
-            key="landing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <LandingPage onAnalysisStarted={handleAnalysisStarted} />
-          </motion.div>
-        )}
+      <div className="bg-mesh" />
 
-        {view === 'analysis' && (
-          <motion.div
-            key="analysis"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <AnalysisView
-              sessionId={sessionId}
-              meta={meta}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <NavBar view={view} onBack={() => setView('landing')} />
 
-      {/* Back to home — shown during/after analysis */}
-      {view === 'analysis' && (
-        <button
-          onClick={() => setView('landing')}
-          className="fixed top-4 left-4 text-xs text-gray-600 hover:text-gray-400 transition-colors"
-        >
-          ← New roast
-        </button>
-      )}
+      <div className="pt-[52px]">
+        <AnimatePresence mode="wait">
+          {view === 'landing' && (
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <LandingPage onAnalysisStarted={handleAnalysisStarted} />
+              <Footer />
+            </motion.div>
+          )}
+
+          {view === 'analysis' && (
+            <motion.div
+              key="analysis"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <AnalysisView sessionId={sessionId} meta={meta} />
+              <Footer />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }

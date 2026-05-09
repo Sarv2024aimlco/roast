@@ -23,4 +23,10 @@ app.include_router(token_feedback_router)
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "roast"}
+    from backend.storage.redis_client import redis
+    total = redis.get("counter:total_analyses")
+    return {
+        "status": "ok",
+        "service": "roast",
+        "total_analyses": int(total) if total else 0,
+    }

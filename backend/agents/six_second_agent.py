@@ -69,6 +69,9 @@ Produce the SixSecondAndTrajectory JSON output.""",
             messages, max_tokens=1500, temperature=0.2, session_id=session_id
         )
 
+        if not text or not text.strip():
+            raise ValueError("empty_response")
+
         data = extract_json(text)
 
         # Parse gaps as GapSignal objects

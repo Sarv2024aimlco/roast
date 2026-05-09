@@ -1,7 +1,7 @@
 import asyncio
 import structlog
 from backend.llm.groq_client import groq_chat
-from backend.llm.gemini_client import gemini_chat, GEMMA_4_26B
+from backend.llm.gemini_client import gemini_chat, GEMINI_FLASH_LITE
 from backend.llm.cerebras_client import cerebras_chat
 from backend.llm.nvidia_nim_client import nim_chat
 from backend.llm.openrouter_client import openrouter_chat
@@ -9,14 +9,14 @@ from backend.llm.openrouter_client import openrouter_chat
 logger = structlog.get_logger()
 
 # ── ReviewAgent fallback chain ────────────────────────────────────────────────
-# Tried in order. Groq primary, then Cerebras (1M tok/day), then NVIDIA NIM
+# Tried in order. Groq primary, then NVIDIA NIM
 # (40 RPM no daily cap), then Gemma as last resort, then OpenRouter emergency.
 REVIEW_MODEL_CHAIN = [
-    ("groq",       "meta-llama/llama-4-scout-17b-16e-instruct"),  # 1K RPD, 30K TPM
-    ("groq",       "llama-3.3-70b-versatile"),                    # 1K RPD, 12K TPM
-    ("groq",       "qwen/qwen3-32b"),                             # 1K RPD, 6K TPM
-    ("nvidia_nim", None),                                         # 40 RPM, no daily cap
-    ("gemini",     GEMMA_4_26B),                                  # gemini-2.5-flash-lite, verified working
+    ("groq",       "meta-llama/llama-4-scout-17b-16e-instruct"),  # 438 tok/s, 2K RPD
+    ("groq",       "llama-3.3-70b-versatile"),                    # 345 tok/s, 2K RPD
+    ("groq",       "qwen/qwen3-32b"),                             # 243 tok/s, 2K RPD
+    ("gemini",     GEMINI_FLASH_LITE),                           # 159 tok/s, 1.5K RPD — thinking disabled
+    ("nvidia_nim", None),                                         # 68 tok/s, no daily cap
     ("openrouter", None),                                         # 50 RPD, emergency only
 ]
 
@@ -94,18 +94,19 @@ async def call_red_flag_agent(
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
-    RedFlagAgent uses allam-2-7b — separate RPM bucket from llama-3.1-8b.
-    allam-2-7b: 30 RPM, 7K RPD, 4096 context. Good for structured extraction.
+    RedFlagAgent uses llama-3.3-70b-versatile — separate RPM bucket, reliable JSON.
+    12K TPM, 1K RPD per key (2K combined). Replaced allam-2-7b which had
+    Arabic output, wrong field names, and 4096 context limit issues.
     Falls back to llama-3.1-8b if needed.
     """
     messages = [{"role": "user", "content": prompt}]
     try:
         return await groq_chat(
-            messages=messages, model="allam-2-7b",
+            messages=messages, model="llama-3.3-70b-versatile",
             max_tokens=max_tokens, temperature=0.1, session_id=session_id,
         )
     except Exception as e:
-        logger.warning("red_flag_allam_failed_falling_back", error=str(e), session_id=session_id)
+        logger.warning("red_flag_70b_failed_falling_back", error=str(e), session_id=session_id)
         return await groq_chat(
             messages=messages, model="llama-3.1-8b-instant",
             max_tokens=max_tokens, temperature=0.1, session_id=session_id,

@@ -1,4 +1,5 @@
 import json
+import re
 import structlog
 from backend.agents.schemas import (
     ReviewOutput, MarketContextOutput, RedFlagOutput,
@@ -8,11 +9,12 @@ from backend.agents.schemas import (
 from backend.agents.prompts.template import build_system_prompt
 from backend.agents.prompts.review_prompt import VERSIONS as RV_VERSIONS, ACTIVE as RV_ACTIVE
 from backend.llm.router import call_review_agent
+from backend.agents.json_utils import extract_json
 
 logger = structlog.get_logger()
 
-MIN_WORDS = 400
-MAX_WORDS = 1200
+MIN_WORDS = 300
+MAX_WORDS = 2000
 
 PROSE_FIELDS = [
     "whats_working_section",
@@ -86,7 +88,10 @@ Experience range: {jd_requirements.experience_range}
         tech_text += f"Most differentiated signal: {technical_depth.most_differentiated_signal}\n"
         tech_text += f"Biggest technical gap: {technical_depth.biggest_technical_gap}\n"
         tech_text += f"Communication gap: {technical_depth.communication_gap}\n"
-        tech_text += f"Honest summary: {technical_depth.honest_summary}\n\n"
+        tech_text += f"Honest summary: {technical_depth.honest_summary}\n"
+        if technical_depth.unverified_skills:
+            tech_text += f"UNVERIFIED SKILLS (listed but no project evidence): {', '.join(technical_depth.unverified_skills)}\n"
+        tech_text += "\n"
         tech_text += "PROJECT EVALUATIONS:\n"
         for p in technical_depth.project_evaluations:
             tech_text += f"\n{p.name} [{p.difficulty_level.upper()}]:\n"
@@ -182,17 +187,10 @@ Write the complete review JSON.""",
                 session_id=session_id,
             )
 
-            # Extract JSON
-            start = text.find("{")
-            end = text.rfind("}") + 1
-            if start != -1 and end > start:
-                text = text[start:end]
-
-            # Remove control characters that break json.loads
+            # Extract + repair JSON
             import re
             text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
-
-            data = json.loads(text)
+            data = extract_json(text)
 
             # Ensure all required fields exist with defaults
             for field in ["jd_alignment_section"]:

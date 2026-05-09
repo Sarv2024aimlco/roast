@@ -1,5 +1,6 @@
 import asyncio
 import time
+import httpx
 from dataclasses import dataclass
 
 from ingestion.tavily_client import deep, general
@@ -44,11 +45,9 @@ def _build_queries(role: str, company_type: str, market: str) -> dict:
 
 # Map company_type to the companies we scrape from Levels.fyi
 COMPANY_TYPE_TO_LEVELS_COMPANIES = {
-    "Indian Product Company (Tier 1)": ["Flipkart", "Swiggy", "Razorpay", "Zepto", "PhonePe"],
-    "Indian Product Company (Tier 2)": ["Meesho"],
+    "Indian Product Company": ["Flipkart", "Swiggy", "Razorpay", "Zepto", "PhonePe"],
     "FAANG / Big Tech": ["Google", "Microsoft", "Amazon", "Meta", "Apple"],
-    "Early Stage Startup": [],   # startups rarely on Levels.fyi
-    "Growth Stage Startup": [],
+    "Startup": [],
     "Indian Service Company": [],
     "Consulting / IB": [],
     "Semiconductor / Hardware": [],
@@ -163,6 +162,11 @@ async def run_ingestion_for_combo(
             if content and len(content) > 100:
                 source = _source_from_url(url)
                 raw_texts.append((content, source))
+            elif url and len(content) < 100:
+                # Tavily returned truncated content — fetch full page via Jina Reader
+                jina_text = await _fetch_jina(url)
+                if jina_text:
+                    raw_texts.append((jina_text, _source_from_url(url)))
 
     for result_list in general_results:
         if isinstance(result_list, Exception):
@@ -252,3 +256,18 @@ def _source_from_url(url: str) -> str:
     if "levels.fyi" in url_lower:
         return "levels_fyi"
     return "tavily_deep"
+
+
+async def _fetch_jina(url: str) -> str:
+    """Fetch full page content via Jina Reader (free, no API key needed)."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"https://r.jina.ai/{url}",
+                headers={"Accept": "text/plain"},
+            )
+            if r.status_code == 200:
+                return r.text[:3000].strip()
+    except Exception:
+        pass
+    return ""

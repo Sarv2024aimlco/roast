@@ -8,7 +8,7 @@
 > Drop your resume. Get destroyed. Get better.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)](https://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.136-green?logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![Monthly Cost](https://img.shields.io/badge/Monthly%20Cost-%240-brightgreen)](https://github.com)
@@ -23,7 +23,7 @@ Most resume tools read your resume and say *"add more keywords."*
 
 ROAST does something different. It pulls **live market intelligence for your exact role and city before reading your resume** — then runs six specialised agents to produce a brutally honest, market-calibrated review. Not generic advice. Not keyword stuffing. The actual thought process a recruiter runs when they read your resume, calibrated against what's being hired for *this week*.
 
-**What Roast does that no other tool does:**
+**What ROAST does that no other tool does:**
 - Live job posting data from Naukri, Wellfound, Reddit, Levels.fyi — scraped monthly, not training data
 - `TechnicalDepthAgent` that actually understands what you built — evaluates projects technically, not just by keyword
 - Inference chains on every weakness: *what the recruiter sees → what they assume → what they decide*
@@ -93,8 +93,9 @@ flowchart LR
 ```mermaid
 flowchart TD
     A[QStash Cron\n1st Monday 03:00 IST] --> B[10 Tavily Queries\nper combination]
-    B --> C[Levels.fyi\ndirect httpx]
-    B & C --> D[llama-3.1-8b\nClassify + Extract]
+    A --> C[Levels.fyi\ndirect httpx]
+    B --> D[llama-3.1-8b-instant\nClassify + Extract]
+    C --> D
     D -->|discard| X[Skip]
     D -->|keep| E[HiringSignal\nkey_insight]
     E --> F[(SQLite\nmarket_intel.db)]
@@ -167,9 +168,9 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 | Component | Technology | Why |
 |---|---|---|
 | API Framework | FastAPI + uvicorn | Async, fast, WebSocket support |
-| Market Intelligence DB | SQLite + FTS5 + sqlite-vec | BM25 + vector search, no external DB |
+| Market Intelligence DB | SQLite + FTS5 + numpy vectors | BM25 + cosine similarity search, no external DB |
 | Session / Cache | Upstash Redis | Cloud-hosted, survives restarts |
-| PDF Parsing | PyMuPDF + pdfplumber | Dual parser, annotation-layer link extraction |
+| PDF Parsing | PyMuPDF (fitz) | Annotation-layer link extraction for LinkedIn/GitHub |
 | Embeddings | sentence-transformers (all-MiniLM-L6-v2) | Local, no API cost, 384 dims |
 | Scheduling | Upstash QStash | Monthly cron, HMAC-verified |
 
@@ -178,15 +179,15 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 |---|---|---|---|
 | MarketContextAgent | llama-3.1-8b-instant | Groq | 14,400 RPD, fast synthesis |
 | RedFlagAgent | allam-2-7b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 7K RPD |
-| SixSecondAgent | llama3.1-8b | Cerebras | 1M tok/day, spreads load off Groq |
-| CompetitiveAgent | llama-3.3-70b-instruct | NVIDIA NIM | 40 RPM, no daily cap |
+| SixSecondAgent | llama3.1-8b → llama-3.1-8b fallback | Cerebras / Groq | 1M tok/day, spreads load off Groq |
+| CompetitiveAgent | llama-3.3-70b-instruct → llama-3.1-8b fallback | NVIDIA NIM / Groq | 40 RPM, no daily cap |
 | TechnicalDepthAgent | gpt-oss-120b → llama-3.1-8b fallback | Groq | Frontier quality, 1K RPD |
-| ReviewAgent (primary) | llama-4-scout-17b | Groq | Best quality at 1K RPD |
+| ReviewAgent (primary) | llama-4-scout-17b-16e-instruct | Groq | Best quality at 1K RPD |
 | ReviewAgent (fallback A) | llama-3.3-70b-versatile | Groq | 1K RPD |
 | ReviewAgent (fallback B) | qwen/qwen3-32b | Groq | 1K RPD, 60 RPM |
-| ReviewAgent (fallback C) | llama-3.1-8b-instant | Cerebras | 1M tok/day free |
+| ReviewAgent (fallback C) | llama3.1-8b | Cerebras | 1M tok/day free |
 | ReviewAgent (fallback D) | llama-3.3-70b-instruct | NVIDIA NIM | 40 RPM, no daily cap |
-| ReviewAgent (fallback E) | gemma-4-26b | Gemini API | 1.5K RPD, last resort |
+| ReviewAgent (fallback E) | gemma-4-26b-a4b-it | Gemini API | 1.5K RPD, last resort |
 | ReviewAgent (fallback F) | openrouter default | OpenRouter | 50 RPD, emergency only |
 
 ### Data Sources
@@ -277,7 +278,8 @@ roast/
 │   ├── test_phase1.py
 │   ├── test_rate_limit.py
 │   ├── test_session_store.py
-│   └── test_tavily_client.py
+│   ├── test_tavily_client.py
+│   └── test_levels_scraper.py
 ├── scripts/
     └── prepopulate.py        # Pre-populate SQLite before launch
 ```
@@ -288,14 +290,14 @@ roast/
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Vector DB | SQLite + sqlite-vec | Qdrant suspends after 7 days inactivity on free tier |
+| Vector DB | SQLite + numpy vectors | Qdrant suspends after 7 days inactivity on free tier |
 | Search | BM25 + vector + RRF | Neither alone is sufficient; RRF merges without score normalisation |
 | Reranking | Hash dedup | MMR is O(N²); hash dedup is sufficient for duplicate removal |
 | Scheduling | Upstash QStash | Talks directly to running server; no CI/CD setup needed |
-| LLM routing | Custom fallback chain | 5 providers, circuit breakers, proactive switch at <50 RPM remaining |
-| Ingestion LLM | llama-3.1-8b-instant | Merged classify+extract = 1 call; 30 RPM, no thinking mode overhead |
+| LLM routing | Custom fallback chain | 5 providers, circuit breakers, RPM tracked per model in Redis |
+| Ingestion LLM | llama-3.1-8b-instant | Merged classify+extract = 1 call; 14,400 RPD, no thinking overhead |
 | Session state | Upstash Redis | Survives container restarts; WebSocket reconnection via polling |
-| PDF parsing | PyMuPDF + pdfplumber | Dual parser; annotation-layer link extraction for LinkedIn/GitHub |
+| PDF parsing | PyMuPDF (fitz) | Annotation-layer link extraction for LinkedIn/GitHub URLs |
 
 ---
 
@@ -319,7 +321,7 @@ uv sync
 # Copy env template and fill in your keys
 cp .env.example .env
 
-# Pre-populate market intelligence (takes ~10 minutes)
+# Pre-populate market intelligence (takes ~45-60 minutes)
 uv run python3 scripts/prepopulate.py
 
 # Start backend
@@ -371,6 +373,9 @@ DISCORD_WEBHOOK_URL=
 
 # Security
 HMAC_SECRET=your_hmac_secret
+
+# App
+ENVIRONMENT=development
 ```
 
 ---

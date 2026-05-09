@@ -245,6 +245,7 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
             project_evaluations=[], overall_technical_level="",
             most_differentiated_signal="", biggest_technical_gap="",
             communication_gap="", honest_summary="",
+            unverified_skills=[],
         )
 
     # Store sections

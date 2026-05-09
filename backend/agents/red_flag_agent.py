@@ -1,14 +1,13 @@
-import json
-import re
 import structlog
 from backend.agents.schemas import RedFlagOutput, RedFlag
 from backend.agents.prompts.template import build_system_prompt
 from backend.agents.prompts.red_flag_prompt import VERSIONS as RF_VERSIONS, ACTIVE as RF_ACTIVE
 from backend.agents.schemas import MarketContextOutput, JDRequirements
-from backend.llm.router import call_red_flag_agent
+from backend.llm.router import call_red_flag_agent, call_groq_8b
 from backend.agents.json_utils import extract_json
 
-# Phrases that indicate a generic, low-quality inference chain
+logger = structlog.get_logger()
+
 GENERIC_CHAIN_BLOCKLIST = [
     "recruiters look for",
     "is important to",
@@ -22,26 +21,15 @@ GENERIC_CHAIN_BLOCKLIST = [
 
 
 def _passes_quality_gate(flag: RedFlag) -> bool:
-    """
-    Validate a red flag passes the semantic quality gate.
-    Returns True if the flag is specific enough to keep.
-    """
-    # Length checks
     if len(flag.location) < 10:
         return False
     if len(flag.fix) < 20:
         return False
     if len(flag.inference_chain) < 50:
         return False
-
-    # Semantic quality check — count generic phrases
     chain_lower = flag.inference_chain.lower()
     generic_count = sum(1 for phrase in GENERIC_CHAIN_BLOCKLIST if phrase in chain_lower)
-
-    if generic_count >= 2:
-        return False
-
-    return True
+    return generic_count < 2
 
 
 async def run_red_flag_agent(
@@ -56,16 +44,7 @@ async def run_red_flag_agent(
     profile_links: dict | None = None,
     session_id: str = "",
 ) -> RedFlagOutput:
-    """
-    Agent 2 — runs in parallel.
-    Finds red flags with exact quotes, inference chains, and fixes.
-    Also performs visual scan.
-    Uses Gemini 3.1 Flash Lite — strong structured output, 500 RPD free.
-    """
-    task = RF_VERSIONS[RF_ACTIVE]  # no .format() — prompt contains JSON braces
-
-    # Inject role/market/company_type into the system prompt via build_system_prompt
-    # which handles the universal constraints formatting
+    task = RF_VERSIONS[RF_ACTIVE]
 
     system = build_system_prompt(
         role=role,
@@ -92,7 +71,7 @@ RESUME TEXT:
 {resume_text[:4000]}
 
 MARKET RED FLAG TRIGGERS:
-{chr(10).join(f'- {t}' for t in market_context.red_flag_triggers)}
+{chr(10).join(f'- {t}' for t in market_context.red_flag_triggers[:8])}
 
 USER CONTEXT: {user_context or 'None provided'}
 {jd_section}
@@ -100,17 +79,17 @@ USER CONTEXT: {user_context or 'None provided'}
 
 Find all red flags and produce the JSON output."""
 
+    # ── LLM call with fallback ────────────────────────────────────────────────
+    text = None
+    meta = {}
     try:
         text, meta = await call_red_flag_agent(
-            prompt=prompt,
-            max_tokens=2500,
-            session_id=session_id,
+            prompt=prompt, max_tokens=2500, session_id=session_id,
         )
     except Exception as primary_err:
         logger.warning("red_flag_primary_failed_falling_back",
                        error=str(primary_err), session_id=session_id)
         try:
-            from backend.llm.router import call_groq_8b
             text, meta = await call_groq_8b(
                 messages=[
                     {"role": "system", "content": system},
@@ -123,20 +102,23 @@ Find all red flags and produce the JSON output."""
             logger.error("red_flag_agent_all_failed", error=str(groq_err), session_id=session_id)
             return RedFlagOutput(red_flags=[], visual_scan_notes="")
 
-    # Parse response (shared by both primary and fallback paths)
+    # ── Parse ─────────────────────────────────────────────────────────────────
     try:
         data = extract_json(text)
-
-        data = json.loads(text)
-
-        raw_flags = [RedFlag(**f) for f in data.get("red_flags", [])]
+        raw_flags = []
+        for f in data.get("red_flags", []):
+            try:
+                raw_flags.append(RedFlag(**f))
+            except Exception:
+                continue
 
         passed_flags = []
         for flag in raw_flags:
             if _passes_quality_gate(flag):
                 passed_flags.append(flag)
             else:
-                logger.warning("red_flag_quality_gate_failed", flag=flag.flag[:50], session_id=session_id)
+                logger.warning("red_flag_quality_gate_failed",
+                               flag=flag.flag[:50], session_id=session_id)
 
         output = RedFlagOutput(
             red_flags=passed_flags,

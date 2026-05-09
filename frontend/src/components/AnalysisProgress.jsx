@@ -1,43 +1,36 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Flame } from 'lucide-react'
 import { getSessionState } from '../lib/api'
 
 const STEPS = [
-  { key: 'start',          label: 'Extracting text from resume',        done_label: 'Resume parsed' },
-  { key: 'market_intel',   label: 'Loading market intelligence',         done_label: 'Market intelligence loaded' },
-  { key: 'market_context', label: 'Calibrating to your market',          done_label: 'Market calibrated' },
-  { key: 'red_flags',      label: 'Hunting for red flags',               done_label: 'Red flags identified' },
-  { key: 'six_second',     label: 'Reading first impressions',           done_label: 'Career story analysed' },
-  { key: 'competitive',    label: 'Positioning against applicant pool',  done_label: 'Competitive position mapped' },
-  { key: 'technical',      label: 'Evaluating technical depth',          done_label: 'Technical depth evaluated' },
-  { key: 'review',         label: 'Writing your review',                 done_label: 'Review complete' },
+  { key: 'start',          label: 'Parsing resume',                      done: 'Resume parsed' },
+  { key: 'market_intel',   label: 'Loading live market intelligence',    done: 'Market intelligence loaded' },
+  { key: 'market_context', label: 'Calibrating to your market',          done: 'Market calibrated' },
+  { key: 'red_flags',      label: 'Hunting for red flags',               done: 'Red flags identified' },
+  { key: 'six_second',     label: 'Simulating recruiter scan',           done: 'Career story analysed' },
+  { key: 'competitive',    label: 'Mapping competitive position',        done: 'Competitive position mapped' },
+  { key: 'technical',      label: 'Deep technical evaluation',           done: 'Technical depth evaluated' },
+  { key: 'review',         label: 'Writing your roast',                  done: 'Roast complete' },
 ]
 
-function TerminalLine({ step, isDone, isActive, index }) {
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.25, delay: index * 0.05 }}
-        className="terminal-line flex items-center gap-3"
-      >
-        <span className={isDone ? 'text-orange-500' : isActive ? 'text-zinc-400' : 'text-zinc-700'}>
-          {isDone ? '✓' : isActive ? '›' : ' '}
-        </span>
-        <span className={isDone ? 'text-zinc-500' : isActive ? 'text-zinc-200' : 'text-zinc-700'}>
-          {isDone ? step.done_label : step.label}
-          {isActive && <span className="terminal-cursor ml-1" />}
-        </span>
-        {isDone && <span className="text-zinc-700 text-xs ml-auto">[Done]</span>}
-        {isActive && <span className="text-orange-500/60 text-xs ml-auto">[Active]</span>}
-      </motion.div>
-    </AnimatePresence>
-  )
-}
+const ROAST_QUOTES = [
+  'Pulling live job postings from Naukri...',
+  'Checking what Razorpay is actually hiring for...',
+  'Comparing against real applicants at your level...',
+  'Reading between the lines of your resume...',
+  'Calibrating to the Bengaluru market...',
+  'Running 6 agents in parallel...',
+]
 
 export function AnalysisProgress({ sessionId, sections }) {
   const [step, setStep] = useState(1)
+  const [quoteIdx, setQuoteIdx] = useState(0)
+
+  useEffect(() => {
+    const q = setInterval(() => setQuoteIdx(i => (i + 1) % ROAST_QUOTES.length), 3000)
+    return () => clearInterval(q)
+  }, [])
 
   useEffect(() => {
     if (!sessionId) return
@@ -53,7 +46,7 @@ export function AnalysisProgress({ sessionId, sections }) {
         else if (completed.includes('market_context')) setStep(3)
         else setStep(2)
         if (state.status === 'completed') clearInterval(poll)
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     }, 3000)
     setStep(1)
     return () => clearInterval(poll)
@@ -68,54 +61,115 @@ export function AnalysisProgress({ sessionId, sections }) {
     else if (sections.market_context) setStep(3)
   }, [sections])
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-lg">
+  const pct = Math.round((step / STEPS.length) * 100)
 
-        {/* Terminal header */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-3 h-3 rounded-full bg-red-500/60" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-            <div className="w-3 h-3 rounded-full bg-green-500/60" />
-            <span className="text-zinc-600 text-xs ml-2 font-mono">roast — analysis</span>
+  return (
+    <div className="min-h-[calc(100vh-52px)] flex flex-col items-center justify-center px-4 relative z-10">
+      <div className="w-full max-w-md space-y-8">
+
+        {/* ROAST branding */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center space-y-3"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20"
+          >
+            <Flame size={28} className="text-orange-400" />
+          </motion.div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Roasting your resume</h2>
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={quoteIdx}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.3 }}
+                className="text-sm text-[--roast-muted] mt-1"
+              >
+                {ROAST_QUOTES[quoteIdx]}
+              </motion.p>
+            </AnimatePresence>
           </div>
-          <p className="terminal-line text-zinc-500">
-            <span className="text-orange-500">$</span> roast analyse --resume resume.pdf
-          </p>
         </motion.div>
 
-        {/* Steps */}
-        <div className="space-y-2">
-          {STEPS.map((s, i) => {
-            const isDone = i < step
-            const isActive = i === step
-            if (i > step) return null
-            return (
-              <TerminalLine
-                key={s.key}
-                step={s}
-                isDone={isDone}
-                isActive={isActive}
-                index={i}
-              />
-            )
-          })}
-        </div>
+        {/* Terminal */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="roast-card"
+        >
+          {/* Terminal chrome */}
+          <div className="flex items-center gap-2 mb-5 pb-4 border-b border-[--roast-border]">
+            <div className="w-3 h-3 rounded-full bg-red-500/50" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+            <div className="w-3 h-3 rounded-full bg-green-500/50" />
+            <span className="text-[--roast-placeholder] text-xs font-mono ml-2">roast — analysis in progress</span>
+          </div>
 
-        {/* Progress bar */}
-        <div className="mt-8 h-0.5 bg-zinc-800 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"
-            initial={{ width: '0%' }}
-            animate={{ width: `${(step / STEPS.length) * 100}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-          />
-        </div>
-        <p className="text-xs text-zinc-600 mt-2 font-mono">
-          {Math.round((step / STEPS.length) * 100)}% complete
-        </p>
+          {/* Steps */}
+          <div className="space-y-2.5">
+            {STEPS.map((s, i) => {
+              const isDone = i < step
+              const isActive = i === step
+              if (i > step) return null
+              return (
+                <motion.div
+                  key={s.key}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.25, delay: i * 0.04 }}
+                  className="terminal-line flex items-center gap-3"
+                >
+                  <span className={`w-4 text-center shrink-0 ${isDone ? 'text-emerald-400' : isActive ? 'text-orange-400' : 'text-[--roast-placeholder]'}`}>
+                    {isDone ? '✓' : isActive ? '›' : ' '}
+                  </span>
+                  <span className={`flex-1 ${isDone ? 'text-[--roast-placeholder]' : isActive ? 'text-[--roast-text]' : 'text-[--roast-placeholder]'}`}>
+                    {isDone ? s.done : s.label}
+                    {isActive && <span className="terminal-cursor" />}
+                  </span>
+                  {isDone && (
+                    <span className="text-[--roast-placeholder] text-xs shrink-0">done</span>
+                  )}
+                  {isActive && (
+                    <span className="text-orange-500/60 text-xs shrink-0">running</span>
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+
+          {/* Progress */}
+          <div className="mt-6 space-y-2">
+            <div className="h-1.5 bg-[--roast-surface-2] rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: 'linear-gradient(90deg, #f97316, #fb923c)' }}
+                initial={{ width: '0%' }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-[--roast-placeholder] font-mono">{pct}% complete</span>
+              <span className="text-xs text-[--roast-placeholder] font-mono">~{Math.max(0, Math.round((STEPS.length - step) * 2))}s remaining</span>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center text-xs text-[--roast-placeholder]"
+        >
+          6 AI agents · Live market data · Takes ~10-15 seconds
+        </motion.p>
 
       </div>
     </div>

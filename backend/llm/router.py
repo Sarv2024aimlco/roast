@@ -82,18 +82,10 @@ async def call_groq_8b(
     temperature: float = 0.1,
     session_id: str = "",
 ) -> tuple[str, dict]:
-    """
-    For all 8B agents: MarketContextAgent, SixSecondAgent,
-    CompetitiveAgent, FollowUpAgent, DIVE distiller, JD parser,
-    TechnicalDepthAgent, RedFlagAgent (moved from Gemini).
-    Uses llama-3.1-8b-instant — 14,400 RPD. Reliable.
-    """
+    """MarketContextAgent, DIVE distiller, JD parser, FollowUpAgent."""
     return await groq_chat(
-        messages=messages,
-        model="llama-3.1-8b-instant",
-        max_tokens=max_tokens,
-        temperature=temperature,
-        session_id=session_id,
+        messages=messages, model="llama-3.1-8b-instant",
+        max_tokens=max_tokens, temperature=temperature, session_id=session_id,
     )
 
 
@@ -103,41 +95,106 @@ async def call_red_flag_agent(
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
-    RedFlagAgent — moved from Gemini to Groq 8B.
-    Gemini free tier has persistent 503 errors at peak times.
-    Groq 8B: 14,400 RPD, reliable, no 503s.
-    Falls back to Groq 70B if 8B is exhausted.
+    RedFlagAgent uses allam-2-7b — separate RPM bucket from llama-3.1-8b.
+    allam-2-7b: 30 RPM, 7K RPD. Good for structured extraction.
+    Falls back to llama-3.1-8b if needed.
     """
     messages = [{"role": "user", "content": prompt}]
-
-    # Try Groq 8B first
     try:
+        return await groq_chat(
+            messages=messages, model="allam-2-7b",
+            max_tokens=max_tokens, temperature=0.1, session_id=session_id,
+        )
+    except Exception as e:
+        logger.warning("red_flag_allam_failed_falling_back", error=str(e), session_id=session_id)
+        return await groq_chat(
+            messages=messages, model="llama-3.1-8b-instant",
+            max_tokens=max_tokens, temperature=0.1, session_id=session_id,
+        )
+
+
+async def call_technical_depth_agent(
+    messages: list[dict],
+    max_tokens: int = 1500,
+    temperature: float = 0.2,
+    session_id: str = "",
+) -> tuple[str, dict]:
+    """
+    TechnicalDepthAgent uses gpt-oss-120b — separate RPM bucket, frontier quality.
+    gpt-oss-120b: 30 RPM, 1K RPD. Best reasoning for technical evaluation.
+    Falls back to llama-3.1-8b if needed.
+    """
+    try:
+        return await groq_chat(
+            messages=messages, model="openai/gpt-oss-120b",
+            max_tokens=max_tokens, temperature=temperature, session_id=session_id,
+        )
+    except Exception as e:
+        logger.warning("tech_depth_gpt_oss_failed_falling_back", error=str(e), session_id=session_id)
+        return await groq_chat(
+            messages=messages, model="llama-3.1-8b-instant",
+            max_tokens=max_tokens, temperature=temperature, session_id=session_id,
+        )
+
+
+async def call_six_second_agent(
+    messages: list[dict],
+    max_tokens: int = 1000,
+    temperature: float = 0.2,
+    session_id: str = "",
+) -> tuple[str, dict]:
+    """
+    SixSecondAgent uses Cerebras — spreads load away from Groq.
+    Cerebras: 1M tokens/day, 30 RPM, permanently free.
+    Falls back to Groq if Cerebras unavailable.
+    """
+    try:
+        return await cerebras_chat(
+            messages=messages,
+            max_tokens=max_tokens,
+            session_id=session_id,
+        )
+    except Exception as e:
+        logger.warning("six_second_cerebras_failed_falling_back", error=str(e), session_id=session_id)
         return await groq_chat(
             messages=messages,
             model="llama-3.1-8b-instant",
             max_tokens=max_tokens,
-            temperature=0.1,
+            temperature=temperature,
+            session_id=session_id,
+        )
+
+
+async def call_competitive_agent(
+    messages: list[dict],
+    max_tokens: int = 1000,
+    temperature: float = 0.2,
+    session_id: str = "",
+) -> tuple[str, dict]:
+    """
+    CompetitiveAgent uses NVIDIA NIM — spreads load away from Groq.
+    NVIDIA NIM: 40 RPM, no daily cap, permanently free.
+    Falls back to Groq if NIM unavailable.
+    """
+    try:
+        return await nim_chat(
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
             session_id=session_id,
         )
     except Exception as e:
-        logger.warning("red_flag_8b_failed_trying_70b", error=str(e), session_id=session_id)
-
-    # Fallback to Groq 70B
-    try:
+        logger.warning("competitive_nim_failed_falling_back", error=str(e), session_id=session_id)
         return await groq_chat(
             messages=messages,
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             max_tokens=max_tokens,
-            temperature=0.1,
+            temperature=temperature,
             session_id=session_id,
         )
-    except Exception as e:
-        logger.error("red_flag_all_groq_failed", error=str(e), session_id=session_id)
-        raise
 
 
 def _messages_to_prompt(messages: list[dict]) -> str:
-    """Convert OpenAI-style messages to single prompt string for Gemini."""
     parts = []
     for msg in messages:
         role = msg.get("role", "user")

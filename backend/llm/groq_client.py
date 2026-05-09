@@ -10,7 +10,8 @@ logger = structlog.get_logger()
 
 # Parse comma-separated keys into a pool
 _keys = [k.strip() for k in GROQ_API_KEYS.split(",") if k.strip()]
-_current_index = 0
+_call_count = 0  # round-robin counter
+_call_lock = asyncio.Lock()
 
 # RPD limits per model — tracked server-side since Groq doesn't expose RPD in headers
 RPD_LIMITS = {
@@ -24,13 +25,18 @@ RPD_LIMITS = {
 RPM_FALLBACK_THRESHOLD = 50
 
 
-def _get_client() -> AsyncGroq:
-    return AsyncGroq(api_key=_keys[_current_index])
+async def _get_client() -> tuple[AsyncGroq, int]:
+    """Round-robin across keys on every call — distributes load upfront."""
+    global _call_count
+    async with _call_lock:
+        idx = _call_count % len(_keys)
+        _call_count += 1
+    return AsyncGroq(api_key=_keys[idx]), idx
 
 
-def _rotate() -> None:
-    global _current_index
-    _current_index = (_current_index + 1) % len(_keys)
+def _rotate(current_idx: int) -> int:
+    """Return next key index after a 429."""
+    return (current_idx + 1) % len(_keys)
 
 
 def _rpd_key(model: str, key_index: int) -> str:
@@ -52,9 +58,9 @@ def _check_rpd(model: str) -> bool:
     return False
 
 
-def _increment_rpd(model: str) -> None:
-    """Increment RPD counter for current key. Resets at midnight UTC via TTL."""
-    key = _rpd_key(model, _current_index)
+def _increment_rpd(model: str, key_idx: int = 0) -> None:
+    """Increment RPD counter for given key. Resets at midnight UTC via TTL."""
+    key = _rpd_key(model, key_idx)
     count = redis.incr(key)
     if count == 1:
         # First call today — set TTL to expire at midnight UTC
@@ -93,10 +99,10 @@ async def groq_chat(
         raise RuntimeError(f"groq_rpd_exhausted:{model}")
 
     backoff = [2, 4, 8]
+    client, key_idx = await _get_client()  # round-robin pick
 
     for attempt in range(3):
         try:
-            client = _get_client()
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -107,7 +113,7 @@ async def groq_chat(
             text = response.choices[0].message.content.strip()
 
             # Track RPD
-            _increment_rpd(model)
+            _increment_rpd(model, key_idx)
 
             # Check RPM remaining from headers — proactive fallback
             remaining = None
@@ -122,7 +128,7 @@ async def groq_chat(
             metadata = {
                 "provider": "groq",
                 "model": model,
-                "key_index": _current_index,
+                "key_index": key_idx,
                 "rpm_remaining": remaining,
                 "input_tokens": response.usage.prompt_tokens if response.usage else None,
                 "output_tokens": response.usage.completion_tokens if response.usage else None,
@@ -142,7 +148,8 @@ async def groq_chat(
 
         except RateLimitError:
             logger.warning("groq_rate_limit", model=model, attempt=attempt, session_id=session_id)
-            _rotate()
+            key_idx = _rotate(key_idx)
+            client = AsyncGroq(api_key=_keys[key_idx])
             if attempt < 2:
                 await asyncio.sleep(backoff[attempt])
 

@@ -68,7 +68,7 @@ async def session_state(session_id: str):
     status = session.get("status", "pending")
     completed = _get_completed_sections(session_id)
 
-    all_sections = ["market_context", "red_flags", "six_second", "competitive", "review"]
+    all_sections = ["market_context", "red_flags", "six_second", "competitive", "technical_depth", "review"]
     pending = [s for s in all_sections if s not in completed]
 
     return {
@@ -118,7 +118,7 @@ async def share_preview(session_id: str):
 
 def _get_completed_sections(session_id: str) -> dict:
     """Fetch all completed sections from Redis for this session."""
-    sections = ["market_context", "red_flags", "six_second", "competitive", "review"]
+    sections = ["market_context", "red_flags", "six_second", "competitive", "technical_depth", "review"]
     completed = {}
     for section in sections:
         raw = redis.get(f"session:{session_id}:{section}")

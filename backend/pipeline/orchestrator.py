@@ -151,7 +151,7 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
     if request.github_url:
         profile_links["github"] = request.github_url
 
-    red_flags_task = _run_with_gemini_sem(
+    red_flags_task = _run_with_groq_sem(
         run_red_flag_agent(
             resume_text=request.resume_text,
             market_context=market_context,
@@ -166,8 +166,8 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
         )
     )
 
-    six_second_task = _run_with_groq_sem(
-        run_six_second_trajectory_agent(
+    # SixSecond uses Cerebras, Competitive uses NIM — no Groq semaphore needed
+    six_second_task = run_six_second_trajectory_agent(
             resume_text=request.resume_text,
             market_context=market_context,
             role=request.role,
@@ -178,10 +178,8 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
             profile_links=profile_links,
             session_id=sid,
         )
-    )
 
-    competitive_task = _run_with_groq_sem(
-        run_competitive_agent(
+    competitive_task = run_competitive_agent(
             resume_text=request.resume_text,
             market_context=market_context,
             breaking_signal=full_market_ctx.breaking_signal,
@@ -193,7 +191,6 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
             jd_requirements=jd_requirements,
             session_id=sid,
         )
-    )
 
     # TechnicalDepthAgent runs in parallel — no semaphore needed (uses DuckDuckGo + Groq 8B)
     technical_depth_task = run_technical_depth_agent(
@@ -210,8 +207,45 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
         six_second_task,
         competitive_task,
         technical_depth_task,
-        return_exceptions=False,
+        return_exceptions=True,
     )
+
+    # Handle failed agents gracefully — use fallback outputs instead of crashing
+    from backend.agents.schemas import (
+        RedFlagOutput, SixSecondAndTrajectoryOutput, CompetitiveOutput,
+        PercentileEstimate
+    )
+    from backend.agents.technical_depth_agent import TechnicalDepthOutput
+
+    if isinstance(red_flags, Exception):
+        logger.error("red_flags_agent_exception", error=str(red_flags), session_id=sid)
+        red_flags = RedFlagOutput(red_flags=[], visual_scan_notes="")
+
+    if isinstance(six_second, Exception):
+        logger.error("six_second_agent_exception", error=str(six_second), session_id=sid)
+        six_second = SixSecondAndTrajectoryOutput(
+            remembered=[], missed=[], first_impression="Analysis unavailable",
+            survived_cut_assessment="MAYBE", career_story="", progression_signal="",
+            gaps=[], promotion_velocity="", skill_evolution="",
+        )
+
+    if isinstance(competitive, Exception):
+        logger.error("competitive_agent_exception", error=str(competitive), session_id=sid)
+        competitive = CompetitiveOutput(
+            strengths_vs_pool=[], weaknesses_vs_pool=[],
+            percentile_estimate=PercentileEstimate(
+                range="Unable to estimate", reasoning="Rate limit hit", confidence="estimated"
+            ),
+            highest_leverage_change="Analysis unavailable", estimated_impact="", jd_fit_score=None,
+        )
+
+    if isinstance(technical_depth, Exception):
+        logger.error("technical_depth_exception", error=str(technical_depth), session_id=sid)
+        technical_depth = TechnicalDepthOutput(
+            project_evaluations=[], overall_technical_level="",
+            most_differentiated_signal="", biggest_technical_gap="",
+            communication_gap="", honest_summary="",
+        )
 
     # Store sections
     _store_section(sid, "red_flags", red_flags.model_dump())

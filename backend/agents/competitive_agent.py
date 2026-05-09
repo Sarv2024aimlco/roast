@@ -4,7 +4,7 @@ from backend.agents.schemas import CompetitiveOutput, PercentileEstimate
 from backend.agents.prompts.template import build_system_prompt
 from backend.agents.prompts.competitive_prompt import VERSIONS as CP_VERSIONS, ACTIVE as CP_ACTIVE
 from backend.agents.schemas import MarketContextOutput, JDRequirements
-from backend.llm.router import call_groq_8b
+from backend.llm.router import call_competitive_agent as _call_agent
 
 logger = structlog.get_logger()
 
@@ -74,7 +74,7 @@ Produce the CompetitivePositioning JSON output.""",
     ]
 
     try:
-        text, meta = await call_groq_8b(
+        text, meta = await _call_agent(
             messages, max_tokens=1000, temperature=0.2, session_id=session_id
         )
 

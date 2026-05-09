@@ -106,16 +106,15 @@ Find all red flags and produce the JSON output."""
             max_tokens=2000,
             session_id=session_id,
         )
-    except Exception as gemini_err:
-        # Gemini down — fall back to Groq 8B for red flag detection
-        logger.warning("red_flag_gemini_failed_falling_back_to_groq",
-                       error=str(gemini_err), session_id=session_id)
+    except Exception as primary_err:
+        logger.warning("red_flag_primary_failed_falling_back",
+                       error=str(primary_err), session_id=session_id)
         try:
             from backend.llm.router import call_groq_8b
             text, meta = await call_groq_8b(
                 messages=[
-                    {"role": "system", "content": system + "\n\n" + task},
-                    {"role": "user", "content": prompt.split("Find all red flags")[1] if "Find all red flags" in prompt else prompt}
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": prompt},
                 ],
                 max_tokens=2000,
                 session_id=session_id,
@@ -124,6 +123,8 @@ Find all red flags and produce the JSON output."""
             logger.error("red_flag_agent_all_failed", error=str(groq_err), session_id=session_id)
             return RedFlagOutput(red_flags=[], visual_scan_notes="")
 
+    # Parse response (shared by both primary and fallback paths)
+    try:
         if text.startswith("```"):
             text = text.split("```")[1]
             if text.startswith("json"):
@@ -138,18 +139,12 @@ Find all red flags and produce the JSON output."""
         data = json.loads(text)
         raw_flags = [RedFlag(**f) for f in data.get("red_flags", [])]
 
-        # Apply quality gate — filter out generic flags
         passed_flags = []
         for flag in raw_flags:
             if _passes_quality_gate(flag):
                 passed_flags.append(flag)
             else:
-                # Cap severity to LOW for flags that barely pass
-                logger.warning(
-                    "red_flag_quality_gate_failed",
-                    flag=flag.flag[:50],
-                    session_id=session_id,
-                )
+                logger.warning("red_flag_quality_gate_failed", flag=flag.flag[:50], session_id=session_id)
 
         output = RedFlagOutput(
             red_flags=passed_flags,
@@ -168,5 +163,5 @@ Find all red flags and produce the JSON output."""
         return output
 
     except Exception as e:
-        logger.error("red_flag_agent_failed", error=str(e), session_id=session_id)
+        logger.error("red_flag_agent_parse_failed", error=str(e), session_id=session_id)
         return RedFlagOutput(red_flags=[], visual_scan_notes="")

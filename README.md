@@ -23,7 +23,7 @@ Most resume tools read your resume and say *"add more keywords."*
 
 ROAST does something different. It pulls **live market intelligence for your exact role and city before reading your resume** — then runs six specialised agents to produce a brutally honest, market-calibrated review. Not generic advice. Not keyword stuffing. The actual thought process a recruiter runs when they read your resume, calibrated against what's being hired for *this week*.
 
-**What no other tool does:**
+**What Roast does that no other tool does:**
 - Live job posting data from Naukri, Wellfound, Reddit, Levels.fyi — scraped monthly, not training data
 - `TechnicalDepthAgent` that actually understands what you built — evaluates projects technically, not just by keyword
 - Inference chains on every weakness: *what the recruiter sees → what they assume → what they decide*
@@ -61,10 +61,10 @@ flowchart TD
     D --> E[FullMarketContext]
     E --> G[MarketContextAgent\nGroq 8B]
     G --> H{Parallel Agents}
-    H --> I[RedFlagAgent\nGroq 8B]
-    H --> J[SixSecondAgent\nGroq 8B]
-    H --> K[CompetitiveAgent\nGroq 8B]
-    H --> L[TechnicalDepthAgent\nGroq 8B + DuckDuckGo]
+    H --> I[RedFlagAgent\nallam-2-7b]
+    H --> J[SixSecondAgent\nCerebras]
+    H --> K[CompetitiveAgent\nNVIDIA NIM]
+    H --> L[TechnicalDepthAgent\ngpt-oss-120b + DuckDuckGo]
     I & J & K & L --> M[ReviewAgent\nllama-4-scout primary]
     M --> N[WebSocket Stream]
     N --> O[Results Page]
@@ -84,7 +84,7 @@ flowchart LR
     E2 --> E3[Context Distiller\nGroq 8B]
     E3 --> F[FullMarketContext]
     B -->|HIT| F
-    F --> G[+ Breaking Signal\nGemini Flash Lite\n24h cache]
+    F --> G[+ Breaking Signal\nGroq 8B\n24h cache]
     G --> H[MarketContextAgent]
 ```
 
@@ -139,14 +139,6 @@ sequenceDiagram
 ### TechnicalDepthAgent
 A new agent that evaluates your projects with genuine technical understanding — not keyword matching. It uses DuckDuckGo search in real time to look up unfamiliar technologies (Bayesian NBV, d-vector speaker verification, RRF fusion) before evaluating them.
 
-```
-[ADVANCED] ACARE — Autonomous Clinical Assistance Robot
-  Proves: 10-state FSM coordinating voice/vision/motion/safety on ROS2.
-          Dual biometric auth (d-vector + face embedding). ESTOP <200ms.
-          This is robotics + safety engineering + AI. Rare for a fresher.
-  Strongest signal: Always-on ESTOP keyword thread with <200ms voice-to-halt
-  Resume vs reality: UNDERSELLING — the safety architecture depth is buried
-```
 
 ### Inference Chains
 Every weakness comes with the recruiter's actual thought process:
@@ -159,12 +151,12 @@ Moving to next resume."
 ```
 
 ### Live Market Intelligence
-Not training data. Actual job postings scraped this month.
+Not training data. Actual job postings scraped every month.
 
 ```
 Naukri: 20,880 AI Engineer openings in Bengaluru
 Top required: LangChain, RAG, LLM fine-tuning, HuggingFace, FastAPI
-Salary band: ₹15-30L base for freshers with production experience
+Salary band: ₹15-30L base for experienced professionals of 1-2 years production experience
 ```
 
 ---
@@ -185,10 +177,10 @@ Salary band: ₹15-30L base for freshers with production experience
 | Agent | Model | Provider | Why |
 |---|---|---|---|
 | MarketContextAgent | llama-3.1-8b-instant | Groq | 14,400 RPD, fast synthesis |
-| RedFlagAgent | llama-3.1-8b-instant | Groq | Reliable, 14,400 RPD, no 503s |
-| SixSecondAgent | llama-3.1-8b-instant | Groq | Fast, sufficient |
-| CompetitiveAgent | llama-3.1-8b-instant | Groq | Fast, sufficient |
-| TechnicalDepthAgent | llama-3.1-8b-instant | Groq | Fast + DuckDuckGo search |
+| RedFlagAgent | allam-2-7b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 7K RPD |
+| SixSecondAgent | gpt-oss-20b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 1K RPD |
+| CompetitiveAgent | qwen/qwen3-32b → llama-3.1-8b fallback | Groq | 60 RPM, highest on Groq |
+| TechnicalDepthAgent | gpt-oss-120b → llama-3.1-8b fallback | Groq | Frontier quality, 1K RPD |
 | ReviewAgent (primary) | llama-4-scout-17b | Groq | Best quality at 1K RPD |
 | ReviewAgent (fallback A) | llama-3.3-70b-versatile | Groq | 1K RPD |
 | ReviewAgent (fallback B) | qwen/qwen3-32b | Groq | 1K RPD, 60 RPM |
@@ -272,6 +264,7 @@ roast/
 │   ├── database.py           # SQLite schema + FTS5 + triggers
 │   ├── tavily_client.py      # Two keys, budget tracking
 │   ├── levels_scraper.py     # Direct httpx scraper
+│   ├── groq_client.py        # Groq client for ingestion
 │   └── breaking_signal.py    # Daily breaking signal layer
 ├── frontend/
 │   └── src/
@@ -405,7 +398,7 @@ HMAC_SECRET=your_hmac_secret
 | Upstash Redis | Session + cache | $0 (free tier, 500K commands/month) |
 | Upstash QStash | Monthly cron | $0 (free tier) |
 | Groq | LLM inference | $0 (free tier) |
-| Gemini API | RedFlagAgent + ingestion | $0 (free tier) |
+| Gemini API | ReviewAgent last resort | $0 (free tier) |
 | Tavily | Web search (2 keys) | $0 (free tier, 2K searches/month) |
 | Resend | Email tokens | $0 (free tier, 3K emails/month) |
 | **Total** | | **$0/month** |

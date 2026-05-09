@@ -1,17 +1,15 @@
 import asyncio
 import httpx
 import structlog
-from backend.llm.circuit_breaker import CircuitBreaker
+from backend.llm.circuit_breaker import nim_circuit
+from backend.config import NVIDIA_NIM_API_KEY
 
 logger = structlog.get_logger()
-
-from backend.config import NVIDIA_NIM_API_KEY
 
 NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 NVIDIA_NIM_MODEL = "meta/llama-3.3-70b-instruct"
 
 _api_key = NVIDIA_NIM_API_KEY
-nim_circuit = CircuitBreaker(name="nvidia_nim")
 
 
 async def nim_chat(

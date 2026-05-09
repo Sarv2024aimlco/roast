@@ -4,7 +4,7 @@ from backend.agents.schemas import SixSecondAndTrajectoryOutput, GapSignal
 from backend.agents.prompts.template import build_system_prompt
 from backend.agents.prompts.six_second_prompt import VERSIONS as SS_VERSIONS, ACTIVE as SS_ACTIVE
 from backend.agents.schemas import MarketContextOutput
-from backend.llm.router import call_groq_8b
+from backend.llm.router import call_six_second_agent as _call_agent
 
 logger = structlog.get_logger()
 
@@ -64,7 +64,7 @@ Produce the SixSecondAndTrajectory JSON output.""",
     ]
 
     try:
-        text, meta = await call_groq_8b(
+        text, meta = await _call_agent(
             messages, max_tokens=1500, temperature=0.2, session_id=session_id
         )
 

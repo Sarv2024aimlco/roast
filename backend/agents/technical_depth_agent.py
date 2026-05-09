@@ -14,7 +14,7 @@ import re
 import structlog
 from pydantic import BaseModel
 from backend.agents.tech_search import lookup_multiple
-from backend.llm.router import call_groq_8b
+from backend.llm.router import call_technical_depth_agent as _call_agent
 
 logger = structlog.get_logger()
 
@@ -176,7 +176,7 @@ Evaluate the technical depth of this resume.""",
     ]
 
     try:
-        text, meta = await call_groq_8b(
+        text, meta = await _call_agent(
             messages, max_tokens=1500, temperature=0.2, session_id=session_id
         )
 

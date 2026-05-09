@@ -263,7 +263,7 @@ export function LandingPage({ onAnalysisStarted }) {
             { value: market, onChange: setMarket, options: MARKETS, placeholder: 'Target Market' },
           ].map(({ value, onChange, options, placeholder }) => (
             <select key={placeholder} value={value} onChange={e => onChange(e.target.value)}
-              className="roast-select px-3 py-2.5 text-sm w-full">
+              className={`roast-select px-3 py-2.5 text-sm w-full ${!value ? 'unselected' : ''}`}>
               <option value="">{placeholder}</option>
               {options.map(o => <option key={o}>{o}</option>)}
             </select>

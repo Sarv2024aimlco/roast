@@ -4,14 +4,15 @@
 :root {
   --roast-orange: #f97316;
   --roast-orange-dark: #c2410c;
-  --roast-bg: #0a0a0b;
-  --roast-surface: #111113;
-  --roast-surface-2: #1a1a1c;
-  --roast-border: #222226;
+  --roast-bg: #0b0f19;
+  --roast-surface: #111827;
+  --roast-surface-2: #1a1d24;
+  --roast-border: #1f2937;
   --roast-border-focus: #f97316;
-  --roast-text: #e4e4e7;
-  --roast-muted: #71717a;
-  --roast-placeholder: #52525b;
+  --roast-text: #f1f5f9;
+  --roast-muted: #a1a1aa;
+  --roast-placeholder: #71717a;
+  --roast-card: #161b27;
 }
 
 * { box-sizing: border-box; }
@@ -23,6 +24,7 @@ body {
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
 }
 
 h1, h2, h3, .font-display {
@@ -58,9 +60,9 @@ h1, h2, h3, .font-display {
 
 /* ── Glassmorphism dropzone ──────────────────────────────────────────────── */
 .dropzone {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--roast-card);
   backdrop-filter: blur(8px);
-  border: 1.5px dashed #333337;
+  border: 1.5px dashed #2d3748;
   border-radius: 12px;
   transition: all 200ms ease;
 }
@@ -82,8 +84,8 @@ h1, h2, h3, .font-display {
 /* ── Input fields ────────────────────────────────────────────────────────── */
 .roast-input {
   background: var(--roast-surface-2);
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: 1px solid var(--roast-border);
+  border-radius: 10px;
   color: var(--roast-text);
   transition: border-color 150ms ease, box-shadow 150ms ease;
   outline: none;
@@ -100,10 +102,10 @@ h1, h2, h3, .font-display {
 
 .roast-select {
   background: var(--roast-surface-2);
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: 1px solid var(--roast-border);
+  border-radius: 10px;
   color: var(--roast-text);
-  transition: border-color 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
   outline: none;
   cursor: pointer;
   appearance: none;
@@ -118,8 +120,13 @@ h1, h2, h3, .font-display {
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
+/* Unselected select shows muted color, selected shows full text color */
+.roast-select.unselected {
+  color: var(--roast-placeholder);
+}
+
 .roast-select option {
-  background: #1a1a1c;
+  background: #1a1d24;
   color: var(--roast-text);
 }
 
@@ -168,7 +175,7 @@ h1, h2, h3, .font-display {
   color: white;
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   transition: all 150ms ease;
@@ -234,7 +241,7 @@ h1, h2, h3, .font-display {
   background: linear-gradient(
     90deg,
     var(--roast-surface) 25%,
-    #1e1e22 50%,
+    #1e2535 50%,
     var(--roast-surface) 75%
   );
   background-size: 200% 100%;
@@ -277,10 +284,41 @@ h1, h2, h3, .font-display {
   overflow: hidden;
 }
 
+/* ── Card base ───────────────────────────────────────────────────────────── */
+.roast-card {
+  background: var(--roast-card);
+  border: 1px solid var(--roast-border);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+@media (min-width: 640px) {
+  .roast-card { padding: 28px; }
+}
+
+@media (min-width: 1024px) {
+  .roast-card { padding: 32px; }
+}
+
 /* ── Auto-expanding textarea ─────────────────────────────────────────────── */
 .auto-expand {
   resize: none;
   overflow: hidden;
   min-height: 80px;
   max-height: 300px;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.percentile-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--roast-border);
+  overflow: hidden;
+}
+
+.percentile-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f97316, #fb923c);
+  transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
 }

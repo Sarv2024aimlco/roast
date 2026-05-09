@@ -18,24 +18,24 @@ function Section({ title, content, followups, sessionId, sectionKey }) {
       const res = await submitFollowup({ sessionId, section: sectionKey, question })
       setAnswer(res.answer)
       setUsedFollowup(true)
-    } catch (e) {
+    } catch {
       setAnswer('Unable to load answer. Please try again.')
     }
     setLoadingAnswer(false)
   }
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">{title}</h3>
-      <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold text-[--roast-muted] uppercase tracking-wider">{title}</h3>
+      <p className="text-sm text-[--roast-text] leading-[1.75] whitespace-pre-wrap">{content}</p>
 
       {followups?.length > 0 && !usedFollowup && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1">
           {followups.map((q, i) => (
             <button
               key={i}
               onClick={() => handleFollowup(q)}
-              className="text-xs px-3 py-1.5 border border-[#333] rounded-full text-gray-400 hover:border-orange-500/50 hover:text-gray-200 transition-colors"
+              className="text-xs px-3 py-1.5 bg-[--roast-surface-2] border border-[--roast-border] rounded-full text-[--roast-muted] hover:border-orange-500/40 hover:text-[--roast-text] transition-all"
             >
               {q}
             </button>
@@ -46,15 +46,15 @@ function Section({ title, content, followups, sessionId, sectionKey }) {
       <AnimatePresence>
         {activeQuestion && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="border-l-2 border-orange-500/30 pl-4 space-y-2"
+            className="border-l-2 border-orange-500/30 pl-4 space-y-2 mt-2"
           >
-            <p className="text-xs text-gray-500">{activeQuestion}</p>
+            <p className="text-xs text-[--roast-muted]">{activeQuestion}</p>
             {loadingAnswer ? (
               <SkeletonLoader lines={2} />
             ) : (
-              <p className="text-sm text-gray-300 leading-relaxed">{answer}</p>
+              <p className="text-sm text-[--roast-text] leading-relaxed">{answer}</p>
             )}
           </motion.div>
         )}
@@ -67,8 +67,8 @@ export function ReviewDocument({ review, sessionId, loading }) {
   const [showInference, setShowInference] = useInferenceToggle()
 
   if (loading) return (
-    <div className="space-y-6">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">The Review</h2>
+    <div className="space-y-5">
+      <h2 className="text-xs font-semibold text-[--roast-muted] uppercase tracking-wider">The Review</h2>
       <SkeletonLoader lines={6} />
     </div>
   )
@@ -76,14 +76,15 @@ export function ReviewDocument({ review, sessionId, loading }) {
   if (!review) return null
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">The Review</h2>
+        <h2 className="text-xs font-semibold text-[--roast-muted] uppercase tracking-wider">The Review</h2>
         <button
           onClick={() => setShowInference(v => !v)}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          className="text-xs text-[--roast-muted] hover:text-[--roast-text] transition-colors"
         >
-          Recruiter reasoning: <span className={showInference ? 'text-orange-400' : 'text-gray-600'}>
+          Recruiter reasoning:{' '}
+          <span className={showInference ? 'text-orange-400' : 'text-[--roast-placeholder]'}>
             {showInference ? 'ON' : 'OFF'}
           </span>
         </button>
@@ -97,6 +98,8 @@ export function ReviewDocument({ review, sessionId, loading }) {
         sectionKey="six_second"
       />
 
+      <div className="h-px bg-[--roast-border]" />
+
       <Section
         title="What's Hurting You"
         content={showInference ? review.whats_hurting_section : review.whats_hurting_section?.replace(/\([^)]*recruiter[^)]*\)/gi, '')}
@@ -104,6 +107,8 @@ export function ReviewDocument({ review, sessionId, loading }) {
         sessionId={sessionId}
         sectionKey="whats_hurting"
       />
+
+      <div className="h-px bg-[--roast-border]" />
 
       <Section
         title="Career Story"
@@ -113,6 +118,8 @@ export function ReviewDocument({ review, sessionId, loading }) {
         sectionKey="career_story"
       />
 
+      <div className="h-px bg-[--roast-border]" />
+
       <Section
         title="Competitive Position"
         content={review.competitive_position_section}
@@ -120,6 +127,8 @@ export function ReviewDocument({ review, sessionId, loading }) {
         sessionId={sessionId}
         sectionKey="competitive"
       />
+
+      <div className="h-px bg-[--roast-border]" />
 
       <Section
         title="Action Plan"
@@ -130,13 +139,16 @@ export function ReviewDocument({ review, sessionId, loading }) {
       />
 
       {review.jd_alignment_section && (
-        <Section
-          title="JD Alignment"
-          content={review.jd_alignment_section}
-          followups={[]}
-          sessionId={sessionId}
-          sectionKey="jd_alignment"
-        />
+        <>
+          <div className="h-px bg-[--roast-border]" />
+          <Section
+            title="JD Alignment"
+            content={review.jd_alignment_section}
+            followups={[]}
+            sessionId={sessionId}
+            sectionKey="jd_alignment"
+          />
+        </>
       )}
     </div>
   )

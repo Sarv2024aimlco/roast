@@ -11,9 +11,9 @@ _keys = [k.strip() for k in GEMINI_API_KEYS.split(",") if k.strip()]
 _current_index = 0
 
 # Model IDs
-GEMINI_FLASH_LITE = "gemini-3.1-flash-lite-preview"  # RedFlagAgent + breaking signal (500 RPD)
-GEMMA_27B = "gemma-4-26b-a4b-it"                     # ReviewAgent fallback + ingestion (1500 RPD)
-GEMMA_4_26B = "gemma-4-26b-a4b-it"                   # Same model, alias
+GEMINI_FLASH_LITE = "gemini-2.5-flash-lite"           # breaking signal (verified working)
+GEMMA_27B = "gemini-2.5-flash-lite"                   # ReviewAgent fallback (verified working)
+GEMMA_4_26B = "gemma-4-26b-a4b-it"                   # ingestion only
 
 
 def _get_client() -> genai.Client:

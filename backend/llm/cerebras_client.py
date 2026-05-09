@@ -7,8 +7,7 @@ from backend.llm.circuit_breaker import cerebras_circuit
 logger = structlog.get_logger()
 
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
-# llama3.1-8b deprecating May 27 2026 — using llama-3.3-70b as primary
-CEREBRAS_MODEL = "llama-3.3-70b"
+CEREBRAS_MODEL = "llama3.1-8b"
 
 
 async def cerebras_chat(

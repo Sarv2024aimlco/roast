@@ -46,7 +46,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--roast-bg)', color: 'var(--roast-text)' }}>
       <AnimatePresence mode="wait">
         {view === 'landing' && (
           <motion.div

@@ -13,11 +13,10 @@ logger = structlog.get_logger()
 # (40 RPM no daily cap), then Gemma as last resort, then OpenRouter emergency.
 REVIEW_MODEL_CHAIN = [
     ("groq",       "meta-llama/llama-4-scout-17b-16e-instruct"),  # 1K RPD, 30K TPM
-    ("groq",       "llama-3.3-70b-versatile"),                    # 1K RPD
-    ("groq",       "qwen/qwen3-32b"),                             # 1K RPD, 60 RPM
-    ("cerebras",   None),                                         # 1M tok/day free
+    ("groq",       "llama-3.3-70b-versatile"),                    # 1K RPD, 12K TPM
+    ("groq",       "qwen/qwen3-32b"),                             # 1K RPD, 6K TPM
     ("nvidia_nim", None),                                         # 40 RPM, no daily cap
-    ("gemini",     GEMMA_4_26B),                                  # 1.5K RPD, last resort
+    ("gemini",     GEMMA_4_26B),                                  # gemini-2.5-flash-lite, verified working
     ("openrouter", None),                                         # 50 RPD, emergency only
 ]
 
@@ -91,12 +90,12 @@ async def call_groq_8b(
 
 async def call_red_flag_agent(
     prompt: str,
-    max_tokens: int = 1500,
+    max_tokens: int = 2500,
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
     RedFlagAgent uses allam-2-7b — separate RPM bucket from llama-3.1-8b.
-    allam-2-7b: 30 RPM, 7K RPD. Good for structured extraction.
+    allam-2-7b: 30 RPM, 7K RPD, 4096 context. Good for structured extraction.
     Falls back to llama-3.1-8b if needed.
     """
     messages = [{"role": "user", "content": prompt}]
@@ -115,13 +114,14 @@ async def call_red_flag_agent(
 
 async def call_technical_depth_agent(
     messages: list[dict],
-    max_tokens: int = 1500,
+    max_tokens: int = 2000,
     temperature: float = 0.2,
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
     TechnicalDepthAgent uses gpt-oss-120b — separate RPM bucket, frontier quality.
-    gpt-oss-120b: 30 RPM, 1K RPD. Best reasoning for technical evaluation.
+    gpt-oss-120b: 30 RPM, 1K RPD, 8K TPM per key (16K effective with 2 keys).
+    max_tokens=1500 keeps each call under 10% of combined TPM budget.
     Falls back to llama-3.1-8b if needed.
     """
     try:
@@ -144,18 +144,19 @@ async def call_six_second_agent(
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
-    SixSecondAgent uses Cerebras — spreads load away from Groq.
-    Cerebras: 1M tokens/day, 30 RPM, permanently free.
-    Falls back to Groq if Cerebras unavailable.
+    SixSecondAgent uses gpt-oss-20b on Groq — separate RPM bucket.
+    Cerebras key exhausted (402). Falls back to llama-3.1-8b.
     """
     try:
-        return await cerebras_chat(
+        return await groq_chat(
             messages=messages,
+            model="openai/gpt-oss-20b",
             max_tokens=max_tokens,
+            temperature=temperature,
             session_id=session_id,
         )
     except Exception as e:
-        logger.warning("six_second_cerebras_failed_falling_back", error=str(e), session_id=session_id)
+        logger.warning("six_second_gpt_oss_20b_failed_falling_back", error=str(e), session_id=session_id)
         return await groq_chat(
             messages=messages,
             model="llama-3.1-8b-instant",
@@ -172,9 +173,8 @@ async def call_competitive_agent(
     session_id: str = "",
 ) -> tuple[str, dict]:
     """
-    CompetitiveAgent uses NVIDIA NIM — spreads load away from Groq.
-    NVIDIA NIM: 40 RPM, no daily cap, permanently free.
-    Falls back to Groq if NIM unavailable.
+    CompetitiveAgent uses NVIDIA NIM — 40 RPM, no daily cap.
+    Falls back to Groq qwen3-32b (60 RPM combined across 2 keys).
     """
     try:
         return await nim_chat(

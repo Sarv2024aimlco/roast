@@ -39,6 +39,18 @@ class TechnicalDepthOutput(BaseModel):
     honest_summary: str               # 2-3 sentences, no softening
 
 
+def _extract_json(text: str) -> str:
+    """Extract JSON object from model output that may contain markdown or preamble text."""
+    code_block = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
+    if code_block:
+        text = code_block.group(1).strip()
+    start = text.find("{")
+    end = text.rfind("}") + 1
+    if start != -1 and end > start:
+        return text[start:end]
+    return text
+
+
 # ── Technology extraction ─────────────────────────────────────────────────────
 
 def _extract_technologies(resume_text: str) -> list[str]:
@@ -177,14 +189,10 @@ Evaluate the technical depth of this resume.""",
 
     try:
         text, meta = await _call_agent(
-            messages, max_tokens=1500, temperature=0.2, session_id=session_id
+            messages, max_tokens=2000, temperature=0.2, session_id=session_id
         )
 
-        # Extract JSON
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            text = text[start:end]
+        text = _extract_json(text)
 
         data = json.loads(text)
 

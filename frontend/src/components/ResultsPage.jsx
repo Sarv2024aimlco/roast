@@ -5,16 +5,51 @@ import { ReviewDocument } from './ReviewDocument'
 import { FeedbackButton, ThirdAnalysisUnlock } from './Feedback'
 import { SkeletonLoader } from './SkeletonLoader'
 
-function SectionWrapper({ children, loaded }) {
+function Card({ children, delay = 0 }) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="border border-[#222] rounded-lg p-6"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+      className="roast-card"
     >
       {children}
     </motion.div>
+  )
+}
+
+function PercentileBar({ range, confidence }) {
+  const match = range?.match(/(\d+)(?:th|st|nd|rd)[–\-](\d+)/)
+  const single = range?.match(/(\d+)(?:th|st|nd|rd)\s*percentile/)
+  let pct = 50
+  if (match) pct = (parseInt(match[1]) + parseInt(match[2])) / 2
+  else if (single) pct = parseInt(single[1])
+
+  // Split "60th-70th percentile among freshers" into numeric part + label
+  const numericMatch = range?.match(/^([\d\w\-–]+(?:th|st|nd|rd))/)
+  const numericPart = numericMatch ? numericMatch[0] : range
+  const labelPart = numericMatch ? range?.slice(numericPart.length) : ''
+
+  const confidenceLabel = confidence === 'calibrated'
+    ? 'Based on real applicant data'
+    : 'Estimated from market signals'
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xl sm:text-2xl font-bold">
+        <span className="text-orange-400">{numericPart}</span>
+        {labelPart && <span className="text-[--roast-text]">{labelPart}</span>}
+      </div>
+      <div className="percentile-bar">
+        <motion.div
+          className="percentile-bar-fill"
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
+      <p className="text-xs text-[--roast-muted]">{confidenceLabel}</p>
+    </div>
   )
 }
 
@@ -24,65 +59,61 @@ export function ResultsPage({ sections, sessionId, meta, analysisCount }) {
   const competitive = sections.competitive
 
   return (
-    <div className="min-h-screen px-4 py-12">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-screen px-4 py-10 sm:py-14">
+      <div className="max-w-2xl mx-auto space-y-4 sm:space-y-5">
 
         {/* Header */}
-        <div className="space-y-1">
-          <p className="text-xs text-gray-600 uppercase tracking-wider">
+        <div className="space-y-1 px-1">
+          <p className="text-xs text-[--roast-muted] uppercase tracking-wider font-mono">
             {meta.role} · {meta.companyType} · {meta.market}
           </p>
-          <h1 className="text-2xl font-bold">Your Roast</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Your Roast</h1>
         </div>
 
-        {/* TL;DR — loads last, shown first */}
-        <SectionWrapper loaded={!!review}>
+        {/* TL;DR */}
+        <Card delay={0.05}>
           {review ? (
             <TLDRBlock review={review} />
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Bottom Line</p>
+              <p className="text-xs text-[--roast-muted] uppercase tracking-wider">Bottom Line</p>
               <SkeletonLoader lines={3} />
             </div>
           )}
-        </SectionWrapper>
+        </Card>
 
         {/* Market Pulse */}
-        <SectionWrapper loaded={!!marketContext}>
+        <Card delay={0.1}>
           <MarketPulse
             marketContext={marketContext}
             fullContext={null}
             loading={!marketContext}
           />
-        </SectionWrapper>
+        </Card>
 
         {/* The Review */}
-        <SectionWrapper loaded={!!review}>
+        <Card delay={0.15}>
           <ReviewDocument
             review={review}
             sessionId={sessionId}
             loading={!review}
           />
-        </SectionWrapper>
+        </Card>
 
-        {/* Competitive position summary */}
+        {/* Competitive position */}
         {competitive && (
-          <SectionWrapper loaded={true}>
-            <div className="space-y-2">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Where You Stand</h2>
-              <p className="text-2xl font-bold text-orange-500">{competitive.percentile_estimate?.range}</p>
-              <p className="text-xs text-gray-500">{competitive.percentile_estimate?.confidence} estimate</p>
-              <p className="text-sm text-gray-300 mt-2">{competitive.highest_leverage_change}</p>
+          <Card delay={0.2}>
+            <div className="space-y-4">
+              <h2 className="text-xs font-semibold text-[--roast-muted] uppercase tracking-wider">Where You Stand</h2>
+              <PercentileBar range={competitive.percentile_estimate?.range} confidence={competitive.percentile_estimate?.confidence} />
+              <div className="h-px bg-[--roast-border]" />
+              <p className="text-sm text-[--roast-text] leading-relaxed">{competitive.highest_leverage_change}</p>
             </div>
-          </SectionWrapper>
+          </Card>
         )}
 
-        {/* Third analysis unlock — shown after 2nd analysis */}
-        {analysisCount >= 2 && (
-          <ThirdAnalysisUnlock />
-        )}
+        {analysisCount >= 2 && <ThirdAnalysisUnlock />}
 
-        {/* Feedback */}
         {review && (
           <FeedbackButton
             sessionId={sessionId}

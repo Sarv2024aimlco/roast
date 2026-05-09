@@ -1,4 +1,5 @@
 import json
+import re
 import structlog
 from backend.agents.schemas import RedFlagOutput, RedFlag
 from backend.agents.prompts.template import build_system_prompt
@@ -7,6 +8,20 @@ from backend.agents.schemas import MarketContextOutput, JDRequirements
 from backend.llm.router import call_red_flag_agent
 
 logger = structlog.get_logger()
+
+
+def _extract_json(text: str) -> str:
+    """Extract JSON object from model output that may contain markdown or preamble text."""
+    # Strip ```json ... ``` blocks anywhere in the text
+    code_block = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
+    if code_block:
+        text = code_block.group(1).strip()
+    # Find outermost { ... }
+    start = text.find("{")
+    end = text.rfind("}") + 1
+    if start != -1 and end > start:
+        return text[start:end]
+    return text
 
 # Phrases that indicate a generic, low-quality inference chain
 GENERIC_CHAIN_BLOCKLIST = [
@@ -103,7 +118,7 @@ Find all red flags and produce the JSON output."""
     try:
         text, meta = await call_red_flag_agent(
             prompt=prompt,
-            max_tokens=2000,
+            max_tokens=2500,
             session_id=session_id,
         )
     except Exception as primary_err:
@@ -125,16 +140,7 @@ Find all red flags and produce the JSON output."""
 
     # Parse response (shared by both primary and fallback paths)
     try:
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.strip()
-
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            text = text[start:end]
+        text = _extract_json(text)
 
         data = json.loads(text)
         raw_flags = [RedFlag(**f) for f in data.get("red_flags", [])]

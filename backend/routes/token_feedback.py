@@ -56,6 +56,11 @@ async def request_token(body: TokenRequest):
     redis.setex(email_key, TOKEN_TTL, "1")
 
     # Send email via Resend
+    if not RESEND_API_KEY:
+        # Dev mode — no email provider configured, return token directly
+        logger.info("dev_token", token=token, email=email)
+        return {"message": "Dev mode: no email sent.", "dev_token": token}
+
     sent = await _send_token_email(email, token)
     if not sent:
         # Clean up Redis if email failed
@@ -94,7 +99,7 @@ async def verify_token(body: TokenVerifyRequest):
 async def _send_token_email(email: str, token: str) -> bool:
     """Send one-time token via Resend. Returns True on success."""
     if not RESEND_API_KEY:
-        # Development — just log the token
+        # Development — return token directly in response
         logger.info("dev_token", token=token, email=email)
         return True
 
@@ -107,14 +112,18 @@ async def _send_token_email(email: str, token: str) -> bool:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "from": "ROAST <noreply@roast.dev>",
+                    "from": "ROAST <onboarding@resend.dev>",
                     "to": [email],
                     "subject": "Your ROAST token",
                     "html": f"""
-<p>Here's your one-time token for an extra ROAST analysis:</p>
-<p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">{token[:8].upper()}</p>
-<p>Enter this on the ROAST page. Valid for 24 hours, one use only.</p>
-<p style="color: #666; font-size: 12px;">No spam, ever. This is the only email you'll get from us.</p>
+<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #0b0f19; color: #f1f5f9; border-radius: 12px;">
+  <h2 style="margin: 0 0 16px; color: #f97316;">🔥 Your ROAST token</h2>
+  <p style="margin: 0 0 24px; color: #a1a1aa;">Use this token to unlock one more free analysis:</p>
+  <div style="background: #161b27; border: 1px solid #1f2937; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px;">
+    <code style="font-size: 18px; font-weight: bold; letter-spacing: 3px; color: #f97316;">{token}</code>
+  </div>
+  <p style="color: #71717a; font-size: 12px; margin: 0;">Valid for 24 hours · One use only · No spam, ever.</p>
+</div>
 """,
                 },
             )

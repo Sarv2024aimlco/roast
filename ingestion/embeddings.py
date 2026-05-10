@@ -1,38 +1,56 @@
+"""
+Embeddings using Google Gemini text-embedding-004.
+Replaces sentence-transformers to avoid shipping PyTorch/CUDA in production.
+768 dimensions, free tier: 1500 RPM.
+"""
+
+import os
+import time
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from ingestion.database import get_connection
 
-# Load the model once when this module is imported.
-# All subsequent calls reuse the same loaded model — no re-downloading.
-# all-MiniLM-L6-v2: small (90MB), fast, good quality. 384 dimensions per embedding.
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+# Gemini embedding dimension
+EMBEDDING_DIM = 768
+
+
+def _get_client():
+    from google import genai
+    api_keys = os.getenv("GEMINI_API_KEYS", "")
+    key = api_keys.split(",")[0].strip()
+    return genai.Client(api_key=key)
 
 
 def embed_text(text: str) -> bytes:
     """
-    Convert a string into a 384-dimensional embedding vector.
+    Convert a string into a 768-dimensional embedding vector via Gemini.
     Returns the vector as raw bytes (BLOB) for SQLite storage.
     """
-    vector = _model.encode(text, normalize_embeddings=True)
-    # numpy array → raw bytes so SQLite can store it as BLOB
-    return vector.astype(np.float32).tobytes()
+    client = _get_client()
+    result = client.models.embed_content(
+        model="text-embedding-004",
+        contents=text,
+    )
+    vector = np.array(result.embeddings[0].values, dtype=np.float32)
+    # Normalize for cosine similarity via dot product
+    norm = np.linalg.norm(vector)
+    if norm > 0:
+        vector = vector / norm
+    return vector.tobytes()
 
 
 def bytes_to_vector(blob: bytes) -> np.ndarray:
-    """
-    Convert raw bytes from SQLite back into a numpy array.
-    Used during vector search to compare embeddings.
-    """
+    """Convert raw bytes from SQLite back into a numpy array."""
     return np.frombuffer(blob, dtype=np.float32)
 
 
-def update_embedding(row_id: int, text: str) -> None:
-    """
-    Generate an embedding for `text` and store it in the
-    embedding column for the given row_id.
-    """
-    embedding_bytes = embed_text(text)
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    """Cosine similarity via dot product (vectors are pre-normalized)."""
+    return float(np.dot(a, b))
 
+
+def update_embedding(row_id: int, text: str) -> None:
+    """Generate an embedding for text and store it for the given row_id."""
+    embedding_bytes = embed_text(text)
     conn = get_connection()
     with conn:
         conn.execute(
@@ -44,36 +62,23 @@ def update_embedding(row_id: int, text: str) -> None:
 
 def embed_all_missing() -> int:
     """
-    Find all rows with no embedding yet and generate one for each.
-    Called after bulk inserts to fill in embeddings in one pass.
+    Find all rows with no embedding and generate one for each.
+    Called after bulk inserts. Rate-limited to stay within Gemini free tier.
     Returns number of rows updated.
     """
     conn = get_connection()
-
     rows = conn.execute(
         "SELECT id, content FROM market_signals WHERE embedding IS NULL"
     ).fetchall()
-
     conn.close()
 
-    for row in rows:
+    for i, row in enumerate(rows):
         update_embedding(row["id"], row["content"])
+        # 1500 RPM = 25 RPS — small sleep to avoid bursting
+        if i > 0 and i % 20 == 0:
+            time.sleep(1)
 
     return len(rows)
-
-
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    """
-    Calculate how similar two vectors are.
-    Returns a value between -1 and 1.
-    1.0  = identical meaning
-    0.0  = unrelated
-    -1.0 = opposite meaning (rare in practice)
-
-    Since we normalise embeddings on creation (normalize_embeddings=True),
-    cosine similarity is just a dot product — fast.
-    """
-    return float(np.dot(a, b))
 
 
 def search_by_embedding(
@@ -84,19 +89,12 @@ def search_by_embedding(
     limit: int = 15,
 ) -> list[dict]:
     """
-    Find the most semantically similar signals to `query`
+    Find the most semantically similar signals to query
     for a given role + company_type + market combination.
-
-    Steps:
-    1. Embed the query
-    2. Fetch all signals for the combination that have embeddings
-    3. Compute cosine similarity between query and each signal
-    4. Return top `limit` results sorted by similarity
     """
     query_vector = bytes_to_vector(embed_text(query))
 
     conn = get_connection()
-
     rows = conn.execute(
         """
         SELECT id, role, company_type, market, source, signal_type, content, embedding
@@ -107,13 +105,16 @@ def search_by_embedding(
         """,
         (role, company_type, market),
     ).fetchall()
-
     conn.close()
 
-    # Score each row by cosine similarity to the query
     scored = []
     for row in rows:
+        if not row["embedding"]:
+            continue
         vector = bytes_to_vector(row["embedding"])
+        # Dimension mismatch guard — old 384-dim embeddings vs new 768-dim
+        if len(vector) != EMBEDDING_DIM:
+            continue
         score = cosine_similarity(query_vector, vector)
         scored.append({
             "id": row["id"],
@@ -126,7 +127,5 @@ def search_by_embedding(
             "score": score,
         })
 
-    # Sort by score descending — highest similarity first
     scored.sort(key=lambda x: x["score"], reverse=True)
-
     return scored[:limit]

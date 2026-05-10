@@ -28,6 +28,7 @@ ROAST does something different. It pulls **live market intelligence for your exa
 - `TechnicalDepthAgent` that actually understands what you built — evaluates projects technically, not just by keyword
 - Inference chains on every weakness: *what the recruiter sees → what they assume → what they decide*
 - Competitive positioning against real applicants at your experience level, not senior engineers
+- Expected CTC range calibrated to your role, company type, and percentile position
 - $0/month infrastructure — entirely on free tiers
 
 ---
@@ -55,14 +56,14 @@ Fix first:          Add "X analyses run" to ROAST bullet. That's the difference
 
 ```mermaid
 flowchart TD
-    A[User uploads PDF] --> B["/analyse endpoint"]
+    A[User uploads PDF] --> B["/api/analyse endpoint"]
     B --> C{Validate PDF\nRate limit\nBot detection}
     C --> D[DIVE Retrieval Pipeline]
     D --> E[FullMarketContext]
-    E --> G[MarketContextAgent\nGroq 8B]
+    E --> G[MarketContextAgent\nGroq llama-3.1-8b]
     G --> H{Parallel Agents}
     H --> I[RedFlagAgent\nllama-3.3-70b-versatile]
-    H --> J[SixSecondAgent\ngpt-oss-20b]
+    H --> J[SixSecondAgent\nqwen3-32b]
     H --> K[CompetitiveAgent\nqwen3-32b]
     H --> L[TechnicalDepthAgent\ngpt-oss-120b + DuckDuckGo]
     I & J & K & L --> M[ReviewAgent\nllama-4-scout primary]
@@ -84,7 +85,7 @@ flowchart LR
     E2 --> E3[Context Distiller\nGroq 8B]
     E3 --> F[FullMarketContext]
     B -->|HIT| F
-    F --> G[+ Breaking Signal\nGroq 8B\n24h cache]
+    F --> G[+ Breaking Signal\n24h cache]
     G --> H[MarketContextAgent]
 ```
 
@@ -92,14 +93,14 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A[QStash Cron\n1st Monday 03:00 IST] --> B[10 Tavily Queries\nper combination]
+    A[QStash Cron\n1st of month 03:00 IST] --> B[10 Tavily Queries\nper combination]
     A --> C[Levels.fyi\ndirect httpx]
     B --> D[llama-3.1-8b-instant\nClassify + Extract]
     C --> D
     D -->|discard| X[Skip]
     D -->|keep| E[HiringSignal\nkey_insight]
     E --> F[(SQLite\nmarket_intel.db)]
-    F --> G[Generate Embeddings\nall-MiniLM-L6-v2]
+    F --> G[Generate Embeddings\nGemini gemini-embedding-001]
 ```
 
 ### Agent Pipeline
@@ -138,8 +139,7 @@ sequenceDiagram
 ## What Makes It Different
 
 ### TechnicalDepthAgent
-A new agent that evaluates your projects with genuine technical understanding — not keyword matching. It uses DuckDuckGo search in real time to look up unfamiliar technologies (Bayesian NBV, d-vector speaker verification, RRF fusion) before evaluating them.
-
+Evaluates your projects with genuine technical understanding — not keyword matching. Uses DuckDuckGo search in real time to look up unfamiliar technologies (Bayesian NBV, d-vector speaker verification, RRF fusion) before evaluating them. Rates difficulty as tutorial / intermediate / advanced / exceptional calibrated to your experience level.
 
 ### Inference Chains
 Every weakness comes with the recruiter's actual thought process:
@@ -160,6 +160,9 @@ Top required: LangChain, RAG, LLM fine-tuning, HuggingFace, FastAPI
 Salary band: ₹15-30L base for experienced professionals of 1-2 years production experience
 ```
 
+### Competitive Positioning
+Percentile estimate + expected CTC range calibrated to your role, company type, and experience level — compared against real applicants at the same level, not all applicants.
+
 ---
 
 ## Tech Stack
@@ -169,19 +172,19 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 |---|---|---|
 | API Framework | FastAPI + uvicorn | Async, fast, WebSocket support |
 | Market Intelligence DB | SQLite + FTS5 + numpy vectors | BM25 + cosine similarity search, no external DB |
-| Session / Cache | Upstash Redis | Cloud-hosted, survives restarts |
+| Session / Cache | Upstash Redis | Cloud-hosted, survives container restarts |
 | PDF Parsing | PyMuPDF (fitz) | Annotation-layer link extraction for LinkedIn/GitHub |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) | Local, no API cost, 384 dims |
+| Embeddings | Gemini gemini-embedding-001 (3072-dim) | No model in memory, API-based, free tier |
 | Scheduling | Upstash QStash | Monthly cron, HMAC-verified |
 
 ### LLM Routing
 | Agent | Model | Provider | Why |
 |---|---|---|---|
 | MarketContextAgent | llama-3.1-8b-instant | Groq | 14,400 RPD, fast synthesis |
-| RedFlagAgent | llama-3.3-70b-versatile → llama-3.1-8b fallback | Groq | Reliable JSON, 2K RPD |
+| RedFlagAgent | llama-3.3-70b-versatile → llama-3.1-8b fallback | Groq | Reliable JSON, separate RPM bucket |
 | SixSecondAgent | qwen/qwen3-32b → llama-3.1-8b fallback | Groq | Separate RPM bucket, reliable JSON |
-| CompetitiveAgent | qwen/qwen3-32b → llama-3.3-70b-instruct fallback | Groq / NVIDIA NIM | 60 RPM, strong reasoning |
-| TechnicalDepthAgent | gpt-oss-120b → llama-3.1-8b fallback | Groq | Frontier quality, 1K RPD |
+| CompetitiveAgent | qwen/qwen3-32b → NVIDIA NIM fallback | Groq / NVIDIA NIM | 60 RPM, strong reasoning |
+| TechnicalDepthAgent | gpt-oss-120b → llama-3.1-8b fallback | Groq | Frontier quality, tool calling |
 | ReviewAgent (primary) | llama-4-scout-17b-16e-instruct | Groq | 438 tok/s, 2K RPD |
 | ReviewAgent (fallback A) | llama-3.3-70b-versatile | Groq | 345 tok/s, 2K RPD |
 | ReviewAgent (fallback B) | qwen/qwen3-32b | Groq | 243 tok/s, 2K RPD |
@@ -207,7 +210,7 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 | Styling | Tailwind CSS v4 |
 | Animations | Framer Motion |
 | Icons | Lucide React |
-| Real-time | WebSocket with polling fallback |
+| Real-time | WebSocket with HTTP polling fallback |
 
 ---
 
@@ -222,7 +225,7 @@ roast/
 │   │   ├── red_flag_agent.py
 │   │   ├── six_second_agent.py
 │   │   ├── competitive_agent.py
-│   │   ├── technical_depth_agent.py  # New — genuine technical evaluation
+│   │   ├── technical_depth_agent.py  # Agentic — tool calling + DuckDuckGo
 │   │   ├── review_agent.py
 │   │   ├── followup_agent.py
 │   │   ├── tech_search.py    # DuckDuckGo real-time tech lookup
@@ -234,19 +237,19 @@ roast/
 │   │   ├── nvidia_nim_client.py
 │   │   ├── openrouter_client.py
 │   │   ├── circuit_breaker.py
-│   │   └── router.py         # Fallback chain
+│   │   └── router.py         # Fallback chain per agent
 │   ├── pipeline/
 │   │   └── orchestrator.py   # Full pipeline coordination
 │   ├── retrieval/
 │   │   └── dive.py           # DIVE: BM25 + vector + RRF + dedup + distil
 │   ├── routes/
-│   │   ├── analyse.py        # POST /analyse
-│   │   ├── session.py        # POST /session-init
-│   │   ├── websocket.py      # WS /ws/{id}, GET /session/{id}/state
+│   │   ├── analyse.py        # POST /api/analyse
+│   │   ├── session.py        # POST /api/session-init
+│   │   ├── websocket.py      # WS /api/ws/{id}, GET /api/session/{id}/state
 │   │   ├── ws_manager.py     # WebSocket connection manager
-│   │   ├── followup.py       # POST /followup
+│   │   ├── followup.py       # POST /api/followup
 │   │   ├── cron.py           # POST /refresh-market-intel
-│   │   └── token_feedback.py # POST /token, POST /feedback
+│   │   └── token_feedback.py # POST /api/token, POST /api/feedback
 │   ├── storage/
 │   │   ├── redis_client.py
 │   │   ├── rate_limit.py
@@ -256,12 +259,12 @@ roast/
 │   │   └── bullet_curator.py # Bullet curation pipeline
 │   ├── config.py
 │   ├── pdf_reader.py
-│   └── main.py
+│   └── main.py               # FastAPI app + static file serving
 ├── ingestion/
 │   ├── pipeline.py           # Monthly ingestion orchestrator
 │   ├── extractor.py          # Classify + extract in one Groq call
-│   ├── embeddings.py         # sentence-transformers
-│   ├── search.py             # BM25 search functions
+│   ├── embeddings.py         # Gemini gemini-embedding-001 (3072-dim)
+│   ├── search.py             # BM25 + vector search functions
 │   ├── database.py           # SQLite schema + FTS5 + triggers
 │   ├── tavily_client.py      # Two keys, budget tracking
 │   ├── levels_scraper.py     # Direct httpx scraper
@@ -273,15 +276,10 @@ roast/
 │       ├── hooks/            # useWebSocket, useInferenceToggle
 │       └── lib/api.js        # All API calls
 ├── tests/
-│   ├── test_config.py
-│   ├── test_pdf_reader.py
-│   ├── test_phase1.py
-│   ├── test_rate_limit.py
-│   ├── test_session_store.py
-│   ├── test_tavily_client.py
-│   └── test_levels_scraper.py
 ├── scripts/
-    └── prepopulate.py        # Pre-populate SQLite before launch
+│   ├── prepopulate.py        # Pre-populate SQLite before launch
+│   └── reembed.py            # Regenerate embeddings after model change
+└── Dockerfile                # Multi-stage: Node build + Python serve
 ```
 
 ---
@@ -291,6 +289,7 @@ roast/
 | Decision | Choice | Rationale |
 |---|---|---|
 | Vector DB | SQLite + numpy vectors | Qdrant suspends after 7 days inactivity on free tier |
+| Embeddings | Gemini API (gemini-embedding-001) | Removes PyTorch/CUDA from image — cuts Docker image from 3.5GB to ~300MB |
 | Search | BM25 + vector + RRF | Neither alone is sufficient; RRF merges without score normalisation |
 | Reranking | Hash dedup | MMR is O(N²); hash dedup is sufficient for duplicate removal |
 | Scheduling | Upstash QStash | Talks directly to running server; no CI/CD setup needed |
@@ -298,6 +297,7 @@ roast/
 | Ingestion LLM | llama-3.1-8b-instant | Merged classify+extract = 1 call; 14,400 RPD, no thinking overhead |
 | Session state | Upstash Redis | Survives container restarts; WebSocket reconnection via polling |
 | PDF parsing | PyMuPDF (fitz) | Annotation-layer link extraction for LinkedIn/GitHub URLs |
+| Deployment | Single Docker container | FastAPI serves both API and React static build — no separate frontend hosting |
 
 ---
 
@@ -312,7 +312,7 @@ roast/
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_USERNAME/roast.git
+git clone https://github.com/sarv-projects/roast.git
 cd roast
 
 # Install dependencies
@@ -336,42 +336,30 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`
+Open `http://localhost:5173` — the Vite dev server proxies `/api/*` to the backend.
 
 ### Environment Variables
 
+See `.env.example` for the full list. Required keys:
+
 ```bash
 # LLM Providers (comma-separated for key rotation)
-GROQ_API_KEYS=your_groq_key1,your_groq_key2   
-GEMINI_API_KEYS=your_gemini_key1,your_gemini_key2
-CEREBRAS_API_KEY=your_cerebras_key
-NVIDIA_NIM_API_KEY=your_nvidia_nim_key
-OPENROUTER_API_KEY=your_openrouter_key
+GROQ_API_KEYS=your_groq_key1,your_groq_key2
+GEMINI_API_KEYS=your_gemini_key1,your_gemini_key2  # also used for embeddings
 
-# Search
+# Search (get free keys at tavily.com)
 TAVILY_API_KEY_DEEP=your_tavily_key_1
 TAVILY_API_KEY_GENERAL=your_tavily_key_2
 
-# Storage
+# Storage (get free at upstash.com)
 UPSTASH_REDIS_REST_URL=your_upstash_url
 UPSTASH_REDIS_REST_TOKEN=your_upstash_token
 
-# Scheduling
-QSTASH_TOKEN=your_qstash_token
-QSTASH_SIGNING_KEY=your_qstash_signing_key
-
-# Email
-RESEND_API_KEY=your_resend_key
-
-# Observability
+# Observability (get free at cloud.langfuse.com)
 LANGFUSE_PUBLIC_KEY=your_langfuse_public_key
 LANGFUSE_SECRET_KEY=your_langfuse_secret_key
-LANGFUSE_BASE_URL=https://cloud.langfuse.com
 
-# Notifications
-DISCORD_WEBHOOK_URL=
-
-# Security
+# Security — generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
 HMAC_SECRET=your_hmac_secret
 
 # App
@@ -382,7 +370,7 @@ ENVIRONMENT=development
 
 ## Supported Roles & Markets
 
-**Roles:** SDE1, SDE2, Senior SDE, Software Engineer / Associate, Full Stack Engineer, Backend Engineer, Embedded Systems Engineer, VLSI Design Engineer, Data Analyst, Data Scientist, Data Engineer, ML Engineer, AI Engineer, AI/ML Engineer, DevOps/SRE, Product Manager, Business Analyst
+**Roles:** SDE1, SDE2 / Senior SDE, Software Engineer / Associate, Full Stack Engineer, Backend Engineer, Embedded Systems Engineer, VLSI Design Engineer, Data Analyst, Data Scientist, Data Engineer, AI/ML Engineer, AI Engineer, DevOps/SRE, Product Manager, Business Analyst
 
 **Markets:** India, USA, UAE, Singapore, UK
 
@@ -392,17 +380,19 @@ ENVIRONMENT=development
 
 ## API Reference
 
+All API routes are prefixed with `/api`. WebSocket at `/api/ws/{id}`. Cron endpoint at `/refresh-market-intel` (no prefix — called by QStash externally).
+
 | Method | Route | Description |
 |---|---|---|
-| `POST` | `/session-init` | Create session, returns `session_id` |
-| `POST` | `/analyse` | Submit resume, launches pipeline |
-| `WS` | `/ws/{session_id}` | Real-time progress streaming |
-| `GET` | `/session/{id}/state` | Session recovery for reconnection |
-| `POST` | `/followup` | FollowUpAgent — one per section per session |
-| `POST` | `/feedback` | Useful/not useful vote |
-| `POST` | `/token` | Request third-analysis email token |
-| `POST` | `/token/verify` | Verify token, unlock extra analysis |
-| `GET` | `/session/{id}` | Raw session data |
+| `POST` | `/api/session-init` | Create session, returns `session_id` |
+| `POST` | `/api/analyse` | Submit resume, launches pipeline |
+| `WS` | `/api/ws/{session_id}` | Real-time progress streaming |
+| `GET` | `/api/session/{id}/state` | Session recovery for reconnection |
+| `GET` | `/api/session/{id}` | Raw session data |
+| `POST` | `/api/followup` | FollowUpAgent — one per section per session |
+| `POST` | `/api/feedback` | Useful/not useful vote |
+| `POST` | `/api/token` | Request third-analysis email token |
+| `POST` | `/api/token/verify` | Verify token, unlock extra analysis |
 | `POST` | `/refresh-market-intel` | QStash cron trigger (HMAC verified) |
 | `GET` | `/health` | Liveness check + total analyses count |
 
@@ -416,16 +406,16 @@ ENVIRONMENT=development
 | Upstash Redis | Session + cache | $0 (free tier, 500K commands/month) |
 | Upstash QStash | Monthly cron | $0 (free tier) |
 | Groq | LLM inference | $0 (free tier) |
-| Gemini API | ReviewAgent fallback C | $0 (free tier) |
-| Tavily | Web search (2 keys) | $0 (free tier, 2K searches/month) |
-| Resend | Email tokens | $0 (free tier, 3K emails/month) |
+| Gemini API | ReviewAgent fallback + embeddings | $0 (free tier) |
+| Tavily | Web search (2 keys, 2K searches/month) | $0 (free tier) |
+| Resend | Email tokens (3K emails/month) | $0 (free tier) |
 | **Total** | | **$0/month** |
 
 ---
 
 ## Built By
 
-**Sarvesh Bhattacharyya** 
+**Sarvesh Bhattacharyya** — [LinkedIn](https://linkedin.com/in/sarvesh-bhattacharyya-485360270)
 
 ---
 

@@ -31,12 +31,12 @@ app.add_middleware(
 )
 
 # ── API routes ────────────────────────────────────────────────────────────────
-app.include_router(session_router)
-app.include_router(analyse_router)
-app.include_router(followup_router)
-app.include_router(websocket_router)
+app.include_router(session_router, prefix="/api")
+app.include_router(analyse_router, prefix="/api")
+app.include_router(followup_router, prefix="/api")
+app.include_router(websocket_router, prefix="/api")
 app.include_router(cron_router)
-app.include_router(token_feedback_router)
+app.include_router(token_feedback_router, prefix="/api")
 
 
 @app.get("/health")
@@ -51,8 +51,6 @@ def health_check():
 
 
 # ── Serve frontend static files ───────────────────────────────────────────────
-# In production the React build lives at frontend/dist (copied by Dockerfile).
-# All non-API routes fall through to index.html for client-side routing.
 _dist = Path(__file__).parent.parent / "frontend" / "dist"
 if _dist.exists():
     app.mount("/assets", StaticFiles(directory=str(_dist / "assets")), name="assets")
@@ -63,5 +61,8 @@ if _dist.exists():
 
     @app.get("/{full_path:path}")
     def serve_spa(full_path: str):
-        # Let API and WS routes pass through (handled above)
+        # Don't intercept API or WebSocket routes
+        if full_path.startswith("api/") or full_path.startswith("ws/") or full_path == "health":
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404)
         return FileResponse(str(_dist / "index.html"))

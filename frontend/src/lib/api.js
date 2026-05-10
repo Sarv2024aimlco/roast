@@ -77,5 +77,5 @@ export async function verifyToken({ token, sessionId }) {
 
 export function createWebSocket(sessionId) {
   const wsBase = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return new WebSocket(`${wsBase}//${window.location.host}/ws/${sessionId}`)
+  return new WebSocket(`${wsBase}//${window.location.host}/api/ws/${sessionId}`)
 }

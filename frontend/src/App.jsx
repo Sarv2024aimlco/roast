@@ -21,7 +21,7 @@ function VisitorCounter() {
 
   useEffect(() => {
     // Fetch total analyses from backend
-    fetch('/api/health')
+    fetch('/health')
       .then(r => r.json())
       .then(d => {
         if (d.total_analyses) setCount(d.total_analyses)

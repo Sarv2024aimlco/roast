@@ -58,6 +58,10 @@ SKIP_SEARCH_TERMS = {
     'groq distillation', 'distillation llm',
     # LangGraph is mainstream enough
     'langgraph',
+    # Robotics/AI algorithms the model knows well enough
+    'bayesian next-best-view', 'bayesian nbv', 'next-best-view',
+    # sqlite-vec is niche but search results are thin — model can evaluate from name
+    'sqlite-vec',
 }
 
 def _should_skip_search(query: str) -> bool:
@@ -272,7 +276,7 @@ async def run_technical_depth_agent(
     try:
         return await asyncio.wait_for(
             _run_agentic_loop(client, messages, session_id),
-            timeout=40.0,
+            timeout=55.0,
         )
     except asyncio.TimeoutError:
         logger.warning("tech_depth_timeout_falling_back", session_id=session_id)

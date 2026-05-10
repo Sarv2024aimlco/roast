@@ -203,8 +203,6 @@ export function LandingPage({ onAnalysisStarted }) {
   const [jdText, setJdText] = useState('')
   const [githubUrl, setGithubUrl] = useState('')
   const [showContext, setShowContext] = useState(false)
-  const [showToken, setShowToken] = useState(false)
-  const [token, setToken] = useState('')
   const [consent, setConsent] = useState(false)
   const [optedIn, setOptedIn] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -317,7 +315,7 @@ export function LandingPage({ onAnalysisStarted }) {
               <div key={label} className="flex flex-col items-center text-center gap-1.5 px-2 py-3 rounded-xl bg-[--roast-surface] border border-[--roast-border]">
                 <Icon size={14} className="text-orange-400" />
                 <p className="text-xs font-semibold text-[--roast-text-2] leading-tight">{label}</p>
-                <p className="text-[10px] text-[--roast-placeholder] leading-tight hidden sm:block">{desc}</p>
+                <p className="text-[10px] text-[--roast-placeholder] leading-tight">{desc}</p>
               </div>
             ))}
           </motion.div>
@@ -331,20 +329,24 @@ export function LandingPage({ onAnalysisStarted }) {
           <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.4 }}
-            className="grid grid-cols-2 gap-2.5"
           >
-            {[
-              { value: experienceLevel, onChange: v => { setExperienceLevel(v); setRole('') }, options: EXPERIENCE_LEVELS, placeholder: 'Experience level' },
-              { value: role, onChange: setRole, options: ROLES, placeholder: 'Target role' },
-              { value: companyType, onChange: setCompanyType, options: COMPANY_TYPES, placeholder: 'Company type' },
-              { value: market, onChange: setMarket, options: MARKETS, placeholder: 'Target market' },
-            ].map(({ value, onChange, options, placeholder }) => (
-              <select key={placeholder} value={value} onChange={e => onChange(e.target.value)}
-                className={`roast-select px-3 py-2.5 text-sm w-full ${!value ? 'unselected' : ''}`}>
-                <option value="">{placeholder}</option>
-                {options.map(o => <option key={o}>{o}</option>)}
-              </select>
-            ))}
+            <p className="text-[10px] text-[--roast-placeholder] uppercase tracking-wider mb-2 font-mono">
+              Calibrate your roast
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { value: experienceLevel, onChange: v => { setExperienceLevel(v); setRole('') }, options: EXPERIENCE_LEVELS, placeholder: 'Experience level' },
+                { value: role, onChange: setRole, options: ROLES, placeholder: 'Target role' },
+                { value: companyType, onChange: setCompanyType, options: COMPANY_TYPES, placeholder: 'Company type' },
+                { value: market, onChange: setMarket, options: MARKETS, placeholder: 'Target market' },
+              ].map(({ value, onChange, options, placeholder }) => (
+                <select key={placeholder} value={value} onChange={e => onChange(e.target.value)}
+                  className={`roast-select px-3 py-2.5 text-sm w-full ${!value ? 'unselected' : ''}`}>
+                  <option value="">{placeholder}</option>
+                  {options.map(o => <option key={o}>{o}</option>)}
+                </select>
+              ))}
+            </div>
           </motion.div>
 
           {/* ── Optional context ── */}
@@ -420,37 +422,7 @@ export function LandingPage({ onAnalysisStarted }) {
                 </>
               )}
             </motion.button>
-            {!canSubmit && !loading && (
-              <p className="text-xs text-center text-[--roast-placeholder] mt-2">
-                {!file ? 'Drop a PDF to get started'
-                  : !consent ? 'Accept the terms to continue'
-                  : 'Fill in all four fields above'}
-              </p>
-            )}
           </motion.div>
-
-          {/* ── Token ── */}
-          <div className="text-center">
-            <button onClick={() => setShowToken(v => !v)}
-              className="text-xs text-[--roast-placeholder] hover:text-[--roast-muted] transition-colors">
-              Have a token?
-            </button>
-            <AnimatePresence>
-              {showToken && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-3">
-                  <div className="flex gap-2">
-                    <input value={token} onChange={e => setToken(e.target.value)}
-                      placeholder="Enter your token"
-                      className="roast-input flex-1 min-w-0 px-4 py-2.5 text-sm" />
-                    <button className="shrink-0 px-4 py-2.5 bg-[--roast-surface-2] hover:bg-[--roast-surface] border border-[--roast-border] text-sm text-[--roast-text] rounded-xl transition-colors">
-                      Apply
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
         </div>
       </div>

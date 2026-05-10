@@ -342,8 +342,8 @@ Open `http://localhost:5173`
 
 ```bash
 # LLM Providers (comma-separated for key rotation)
-GROQ_API_KEYS=your_groq_key
-GEMINI_API_KEYS=your_gemini_key
+GROQ_API_KEYS=your_groq_key1,your_groq_key2   
+GEMINI_API_KEYS=your_gemini_key1,your_gemini_key2
 CEREBRAS_API_KEY=your_cerebras_key
 NVIDIA_NIM_API_KEY=your_nvidia_nim_key
 OPENROUTER_API_KEY=your_openrouter_key
@@ -427,11 +427,7 @@ ENVIRONMENT=development
 
 ## Built By
 
-**Sarvesh Bhattacharyya** — Final-year ECE student at MSRIT, Bengaluru.
-AI Engineer Intern at Beaut Group.
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?logo=linkedin)](https://linkedin.com/in/YOUR_LINKEDIN)
-[![GitHub](https://img.shields.io/badge/GitHub-Follow-black?logo=github)](https://github.com/YOUR_USERNAME)
+**Sarvesh Bhattacharyya** 
 
 ---
 

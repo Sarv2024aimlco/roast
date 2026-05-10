@@ -13,7 +13,7 @@ from backend.agents.json_utils import extract_json
 
 logger = structlog.get_logger()
 
-MIN_WORDS = 300
+MIN_WORDS = 250
 MAX_WORDS = 2000
 
 PROSE_FIELDS = [

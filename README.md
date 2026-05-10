@@ -3,7 +3,7 @@
 # 🔥 ROAST
 ### Resume Intelligence System
 
-**[🌐 Live Demo →](https://roast.dev)** &nbsp;·&nbsp; **[📹 Video Demo →](#)** *(coming soon)*
+**[🌐 Live Demo →](#)** &nbsp;·&nbsp; **[📹 Video Demo →](#)** *(coming soon)*
 
 > Drop your resume. Get destroyed. Get better.
 
@@ -179,7 +179,7 @@ Salary band: ₹15-30L base for experienced professionals of 1-2 years productio
 |---|---|---|---|
 | MarketContextAgent | llama-3.1-8b-instant | Groq | 14,400 RPD, fast synthesis |
 | RedFlagAgent | llama-3.3-70b-versatile → llama-3.1-8b fallback | Groq | Reliable JSON, 2K RPD |
-| SixSecondAgent | gpt-oss-20b → llama-3.1-8b fallback | Groq | Separate RPM bucket, 1K RPD |
+| SixSecondAgent | qwen/qwen3-32b → llama-3.1-8b fallback | Groq | Separate RPM bucket, reliable JSON |
 | CompetitiveAgent | qwen/qwen3-32b → llama-3.3-70b-instruct fallback | Groq / NVIDIA NIM | 60 RPM, strong reasoning |
 | TechnicalDepthAgent | gpt-oss-120b → llama-3.1-8b fallback | Groq | Frontier quality, 1K RPD |
 | ReviewAgent (primary) | llama-4-scout-17b-16e-instruct | Groq | 438 tok/s, 2K RPD |
@@ -386,7 +386,7 @@ ENVIRONMENT=development
 
 **Markets:** India, USA, UAE, Singapore, UK
 
-**Company Types:** Indian Product Company (Tier 1 & 2), Indian Service Company, FAANG/Big Tech, Early Stage Startup, Growth Stage Startup, Consulting/IB, Semiconductor/Hardware, MNC India (Non-FAANG)
+**Company Types:** Indian Product Company, Indian Service Company, FAANG/Big Tech, Startup, Consulting/IB, Semiconductor/Hardware, MNC India (Non-FAANG)
 
 ---
 
@@ -398,7 +398,6 @@ ENVIRONMENT=development
 | `POST` | `/analyse` | Submit resume, launches pipeline |
 | `WS` | `/ws/{session_id}` | Real-time progress streaming |
 | `GET` | `/session/{id}/state` | Session recovery for reconnection |
-| `GET` | `/share/{session_id}` | Public TL;DR share preview |
 | `POST` | `/followup` | FollowUpAgent — one per section per session |
 | `POST` | `/feedback` | Useful/not useful vote |
 | `POST` | `/token` | Request third-analysis email token |
@@ -413,8 +412,7 @@ ENVIRONMENT=development
 
 | Service | Usage | Cost |
 |---|---|---|
-| DigitalOcean Droplet | Backend hosting | $0 (GitHub Education $200 credit) |
-| Vercel | Frontend hosting | $0 (free tier) |
+| DigitalOcean App Platform | Full stack hosting (backend + frontend) | $0 (GitHub Education $200 credit) |
 | Upstash Redis | Session + cache | $0 (free tier, 500K commands/month) |
 | Upstash QStash | Monthly cron | $0 (free tier) |
 | Groq | LLM inference | $0 (free tier) |
@@ -432,5 +430,5 @@ ENVIRONMENT=development
 ---
 
 <div align="center">
-<sub>Built with $0/month infrastructure · Deployed on DigitalOcean + Vercel · Total monthly cost: $0</sub>
+<sub>Built with $0/month infrastructure · Deployed on DigitalOcean App Platform · Total monthly cost: $0</sub>
 </div>

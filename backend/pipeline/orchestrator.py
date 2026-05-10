@@ -39,6 +39,7 @@ logger = structlog.get_logger()
 _groq_sem = asyncio.Semaphore(2)    # max 2 concurrent Groq calls
 _gemini_sem = asyncio.Semaphore(1)  # max 1 concurrent Gemini call
 _global_sem = asyncio.Semaphore(3)  # max 3 simultaneous full pipelines
+_tech_depth_sem = asyncio.Semaphore(1)  # gpt-oss-120b: 8K TPM — only 1 at a time
 
 
 class PipelineRequest(BaseModel):
@@ -206,15 +207,16 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
             session_id=sid,
         )
 
-    # TechnicalDepthAgent runs in parallel — no semaphore needed (uses DuckDuckGo + Groq 8B)
-    technical_depth_task = run_technical_depth_agent(
+    # TechnicalDepthAgent — semaphore to prevent gpt-oss-120b TPM overflow
+    # 8K TPM limit, each call uses ~3500 tokens — only 1 concurrent call safe
+    technical_depth_task = _run_with_tech_depth_sem(run_technical_depth_agent(
         resume_text=request.resume_text,
         role=request.role,
         company_type=request.company_type,
         market=request.market,
         experience_level=request.experience_level,
         session_id=sid,
-    )
+    ))
 
     red_flags, six_second, competitive, technical_depth = await asyncio.gather(
         red_flags_task,
@@ -374,6 +376,11 @@ async def _run_pipeline_inner(request: PipelineRequest) -> PipelineResult:
 
 async def _run_with_groq_sem(coro):
     async with _groq_sem:
+        return await coro
+
+
+async def _run_with_tech_depth_sem(coro):
+    async with _tech_depth_sem:
         return await coro
 
 

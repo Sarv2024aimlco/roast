@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pathlib import Path
 import os
 
@@ -48,6 +48,15 @@ def health_check():
         "service": "roast",
         "total_analyses": int(total) if total else 0,
     }
+
+
+@app.get("/robots.txt", response_class=Response)
+def robots():
+    from fastapi.responses import Response
+    return Response(
+        content="User-agent: *\nDisallow: /api/\nAllow: /\n",
+        media_type="text/plain"
+    )
 
 
 # ── Serve frontend static files ───────────────────────────────────────────────

@@ -48,12 +48,13 @@ if ENVIRONMENT == "production" and not HMAC_SECRET:
 # ── CORS ───────────────────────────────────────────────────
 # Comma-separated list of allowed origins, e.g. "https://roast.dev,https://www.roast.dev"
 _origins_env = get_optional_key("ALLOWED_ORIGINS", "")
-if _origins_env:
+if _origins_env == "*":
+    ALLOWED_ORIGINS = ["*"]
+elif _origins_env:
     ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
 elif ENVIRONMENT == "production":
     raise ValueError("ALLOWED_ORIGINS must be set in production. e.g. https://roast.dev,https://www.roast.dev")
 else:
-    # Dev — allow all localhost variants
     ALLOWED_ORIGINS = [
         "http://localhost:5173",
         "http://localhost:3000",

@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 from backend.storage.redis_client import redis
 
-FREE_ANALYSES_PER_DAY = 2
+FREE_ANALYSES_PER_DAY = 3
 IST = ZoneInfo("Asia/Kolkata")
 
 

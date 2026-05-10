@@ -68,7 +68,7 @@ async def run_red_flag_agent(
     prompt = f"""{system}
 
 RESUME TEXT:
-{resume_text[:4000]}
+{resume_text[:8000]}
 
 MARKET RED FLAG TRIGGERS:
 {chr(10).join(f'- {t}' for t in market_context.red_flag_triggers[:8])}

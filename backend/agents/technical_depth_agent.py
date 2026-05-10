@@ -264,7 +264,7 @@ async def run_technical_depth_agent(
     messages: list[dict] = [
         {"role": "system", "content": system},
         {"role": "user", "content": (
-            f"RESUME:\n{resume_text[:5000]}\n\n"
+            f"RESUME:\n{resume_text[:8000]}\n\n"
             f"TARGET: {role} at {company_type} in {market} ({experience_level})\n\n"
             "Evaluate technical depth. Search only for genuinely niche/unfamiliar tech. "
             "Produce the final JSON when ready."
@@ -300,7 +300,7 @@ async def _fallback_evaluation(
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": (
-            f"RESUME:\n{resume_text[:5000]}\n\n"
+            f"RESUME:\n{resume_text[:8000]}\n\n"
             "Evaluate technical depth based on your existing knowledge. "
             "Return JSON only, no tool calls."
         )},

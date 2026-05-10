@@ -96,28 +96,29 @@ async def analyse(
 
     # ── 4. Rate limit ──────────────────────────────────────
     client = request.client
-    if client is None:
-        xff = request.headers.get("x-forwarded-for")
-        client_ip = xff.split(",")[0].strip() if xff else "127.0.0.1"
-    elif hasattr(client, "host"):
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        client_ip = xff.split(",")[0].strip()
+    elif client and hasattr(client, "host"):
         client_ip = client.host
-    else:
+    elif client:
         client_ip = client[0]
+    else:
+        # No IP available — use a fallback key so rate limit still applies
+        client_ip = "unknown"
 
+    from backend.config import ENVIRONMENT
     rate = check_and_increment_rate_limit(client_ip)
-    if not rate["allowed"]:
-        # Skip rate limit in development
-        from backend.config import ENVIRONMENT
-        if ENVIRONMENT != "development":
-            # Check if this session has a token unlock
-            token_unlocked = redis.get(f"token_unlocked:{session_id}")
-            if not token_unlocked:
-                raise HTTPException(
-                    status_code=429,
-                    detail=f"Daily limit reached ({rate['limit']} analyses/day). Resets at midnight IST."
-                )
-            # Token unlock — delete it (one use only) and allow
-            redis.delete(f"token_unlocked:{session_id}")
+    if not rate["allowed"] and ENVIRONMENT == "production":
+        # Check if this session has a token unlock
+        token_unlocked = redis.get(f"token_unlocked:{session_id}")
+        if not token_unlocked:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily limit reached ({rate['limit']} analyses/day). Resets at midnight IST."
+            )
+        # Token unlock — delete it (one use only) and allow
+        redis.delete(f"token_unlocked:{session_id}")
 
     # ── 5. Validate PDF ────────────────────────────────────
     if file.content_type != "application/pdf":

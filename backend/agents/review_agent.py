@@ -166,7 +166,7 @@ async def run_review_agent(
         {
             "role": "user",
             "content": f"""RESUME TEXT:
-{resume_text[:4000]}
+{resume_text[:8000]}
 
 UPSTREAM ANALYSIS:
 {upstream}

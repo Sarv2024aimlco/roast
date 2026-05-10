@@ -55,7 +55,7 @@ async def run_six_second_trajectory_agent(
 {first_200}
 
 FULL RESUME TEXT:
-{resume_text[:4000]}
+{resume_text[:8000]}
 
 USER CONTEXT: {user_context or 'None provided'}
 {links_section}

@@ -3,7 +3,7 @@
 # 🔥 ROAST
 ### Resume Intelligence System
 
-**[🌐 Live Demo →](#)** &nbsp;·&nbsp; **[📹 Video Demo →](#)** *(coming soon)*
+**[🌐 Live Demo →](https://roast-app-ckard.ondigitalocean.app)** &nbsp;·&nbsp; **[📹 Video Demo →](#)** *(coming soon)*
 
 > Drop your resume. Get destroyed. Get better.
 

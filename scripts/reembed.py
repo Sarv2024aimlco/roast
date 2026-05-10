@@ -1,6 +1,6 @@
 """
-Re-generate all embeddings using the new Gemini text-embedding-004 model.
-Run this once after switching from sentence-transformers to Gemini embeddings.
+Re-generate embeddings using Gemini gemini-embedding-001 (3072-dim).
+Resumes from where it left off — only processes rows with NULL embeddings.
 
 Usage:
     uv run python3 scripts/reembed.py
@@ -9,36 +9,52 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from ingestion.database import get_connection
 from ingestion.embeddings import update_embedding
 import time
 
-def main():
-    # Clear all existing embeddings (they're 384-dim, incompatible with new 768-dim)
-    conn = get_connection()
-    with conn:
-        conn.execute("UPDATE market_signals SET embedding = NULL")
-    count = conn.execute("SELECT COUNT(*) FROM market_signals").fetchone()[0]
-    conn.close()
-    print(f"Cleared embeddings for {count} rows. Re-generating with Gemini...")
 
+def main():
     conn = get_connection()
-    rows = conn.execute("SELECT id, content FROM market_signals").fetchall()
+    rows = conn.execute(
+        "SELECT id, content FROM market_signals WHERE embedding IS NULL"
+    ).fetchall()
     conn.close()
 
     total = len(rows)
+    if total == 0:
+        print("All embeddings already generated.")
+        return
+
+    print(f"Found {total} rows with missing embeddings. Generating...")
+
+    done = 0
     for i, row in enumerate(rows, 1):
         try:
             update_embedding(row["id"], row["content"])
+            done += 1
             if i % 10 == 0 or i == total:
                 print(f"  {i}/{total} done")
-            # Stay within Gemini free tier (1500 RPM)
-            if i % 20 == 0:
-                time.sleep(1)
+            time.sleep(0.1)  # ~10 req/s, well within 1000/day limit
         except Exception as e:
-            print(f"  FAILED row {row['id']}: {e}")
+            err = str(e)
+            if "429" in err or "RESOURCE_EXHAUSTED" in err:
+                print(f"\nRate limit hit at row {row['id']}. Waiting 65s before retry...")
+                time.sleep(65)
+                try:
+                    update_embedding(row["id"], row["content"])
+                    done += 1
+                    print(f"  {i}/{total} done (after retry)")
+                except Exception as e2:
+                    print(f"  FAILED row {row['id']} after retry: {e2}")
+            else:
+                print(f"  FAILED row {row['id']}: {e}")
 
-    print(f"\nDone. {total} embeddings regenerated.")
+    print(f"\nDone. {done}/{total} embeddings generated.")
+
 
 if __name__ == "__main__":
     main()

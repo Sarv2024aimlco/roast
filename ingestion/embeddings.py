@@ -1,7 +1,7 @@
 """
-Embeddings using Google Gemini text-embedding-004.
+Embeddings using Google Gemini gemini-embedding-001.
 Replaces sentence-transformers to avoid shipping PyTorch/CUDA in production.
-768 dimensions, free tier: 1500 RPM.
+3072 dimensions, free tier: 1000 req/day per key.
 """
 
 import os
@@ -10,32 +10,50 @@ import numpy as np
 from ingestion.database import get_connection
 
 # Gemini embedding dimension
-EMBEDDING_DIM = 768
+EMBEDDING_DIM = 3072
 
+_key_index = 0
 
 def _get_client():
     from google import genai
     api_keys = os.getenv("GEMINI_API_KEYS", "")
-    key = api_keys.split(",")[0].strip()
-    return genai.Client(api_key=key)
+    keys = [k.strip() for k in api_keys.split(",") if k.strip()]
+    key = keys[_key_index % len(keys)]
+    return genai.Client(api_key=key), len(keys)
 
 
 def embed_text(text: str) -> bytes:
     """
-    Convert a string into a 768-dimensional embedding vector via Gemini.
+    Convert a string into a 3072-dimensional embedding vector via Gemini.
     Returns the vector as raw bytes (BLOB) for SQLite storage.
+    Rotates API keys on 429.
     """
-    client = _get_client()
-    result = client.models.embed_content(
-        model="text-embedding-004",
-        contents=text,
-    )
-    vector = np.array(result.embeddings[0].values, dtype=np.float32)
-    # Normalize for cosine similarity via dot product
-    norm = np.linalg.norm(vector)
-    if norm > 0:
-        vector = vector / norm
-    return vector.tobytes()
+    global _key_index
+    from google import genai
+    api_keys = os.getenv("GEMINI_API_KEYS", "")
+    keys = [k.strip() for k in api_keys.split(",") if k.strip()]
+
+    for attempt in range(len(keys)):
+        key = keys[_key_index % len(keys)]
+        client = genai.Client(api_key=key)
+        try:
+            result = client.models.embed_content(
+                model="gemini-embedding-001",
+                contents=text,
+            )
+            vector = np.array(result.embeddings[0].values, dtype=np.float32)
+            norm = np.linalg.norm(vector)
+            if norm > 0:
+                vector = vector / norm
+            return vector.tobytes()
+        except Exception as e:
+            err = str(e)
+            if "429" in err or "RESOURCE_EXHAUSTED" in err:
+                # Rotate to next key
+                _key_index += 1
+                if attempt < len(keys) - 1:
+                    continue  # try next key immediately
+            raise  # non-429 error or all keys exhausted
 
 
 def bytes_to_vector(blob: bytes) -> np.ndarray:

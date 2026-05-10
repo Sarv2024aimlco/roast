@@ -24,7 +24,9 @@ RUN pip install uv --no-cache-dir
 WORKDIR /app
 
 # Install Python deps via uv (uses uv.lock for reproducible builds)
+# Install CPU-only torch first to avoid pulling 2GB of CUDA packages
 COPY pyproject.toml uv.lock ./
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
 RUN uv sync --frozen --no-dev
 
 # Copy application code

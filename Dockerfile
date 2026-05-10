@@ -32,7 +32,7 @@ COPY backend/ ./backend/
 COPY ingestion/ ./ingestion/
 COPY scripts/ ./scripts/
 
-# Copy SQLite corpus DB (pre-populated)
+# Copy SQLite corpus DB (pre-populated market signals)
 COPY ingestion/market_intel.db ./ingestion/market_intel.db
 
 # Copy built frontend from stage 1

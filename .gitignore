@@ -16,8 +16,8 @@ wheels/
 frontend/node_modules/
 frontend/dist/
 
-# Database
-ingestion/market_intel.db
+# Database — intentionally tracked, contains pre-populated market signals (no secrets)
+# ingestion/market_intel.db
 
 # Misc
 *.zip

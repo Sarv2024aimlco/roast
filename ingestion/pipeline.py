@@ -2,6 +2,7 @@ import asyncio
 import time
 import httpx
 from dataclasses import dataclass
+from datetime import datetime
 
 from ingestion.tavily_client import deep, general
 from ingestion.levels_scraper import fetch_levels_salary
@@ -22,7 +23,7 @@ def _build_queries(role: str, company_type: str, market: str) -> dict:
     Build the 10 queries for a combination.
     Returns dict with 'deep' and 'general' lists.
     """
-    year = 2026
+    year = datetime.now().year
     return {
         "deep": [
             f"{role} jobs site:naukri.com {market} {year}",

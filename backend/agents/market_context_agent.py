@@ -46,7 +46,8 @@ async def parse_jd(jd_text: str, session_id: str = "") -> JDRequirements | None:
     ]
 
     try:
-        text, _ = await call_groq_8b(messages, max_tokens=600, session_id=session_id)
+        text, _ = await call_groq_8b(messages, max_tokens=600, session_id=session_id,
+                                      agent_name="jd_parser")
 
         # Strip markdown if present
         if text.startswith("```"):
@@ -109,7 +110,8 @@ Produce the MarketContextOutput JSON."""
 
     try:
         text, meta = await call_groq_8b(
-            messages, max_tokens=1000, temperature=0.1, session_id=session_id
+            messages, max_tokens=1000, temperature=0.1, session_id=session_id,
+            agent_name="market_context_agent",
         )
 
         data = extract_json(text)

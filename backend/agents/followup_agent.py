@@ -6,7 +6,7 @@ from backend.storage.redis_client import redis
 
 logger = structlog.get_logger()
 
-FOLLOWUP_TTL = 3600  # 1 hour — same as session TTL
+FOLLOWUP_TTL = 1800  # 30 minutes
 
 
 def _followup_key(session_id: str, section: str) -> str:

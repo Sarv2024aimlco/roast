@@ -80,11 +80,13 @@ async def call_groq_8b(
     max_tokens: int = 1000,
     temperature: float = 0.1,
     session_id: str = "",
+    agent_name: str = "groq_8b",
 ) -> tuple[str, dict]:
     """MarketContextAgent, DIVE distiller, JD parser, FollowUpAgent."""
     return await groq_chat(
         messages=messages, model="llama-3.1-8b-instant",
-        max_tokens=max_tokens, temperature=temperature, session_id=session_id,
+        max_tokens=max_tokens, temperature=temperature,
+        session_id=session_id, agent_name=agent_name,
     )
 
 
@@ -93,23 +95,19 @@ async def call_red_flag_agent(
     max_tokens: int = 2500,
     session_id: str = "",
 ) -> tuple[str, dict]:
-    """
-    RedFlagAgent uses llama-3.3-70b-versatile — separate RPM bucket, reliable JSON.
-    12K TPM, 1K RPD per key (2K combined). Replaced allam-2-7b which had
-    Arabic output, wrong field names, and 4096 context limit issues.
-    Falls back to llama-3.1-8b if needed.
-    """
     messages = [{"role": "user", "content": prompt}]
     try:
         return await groq_chat(
             messages=messages, model="llama-3.3-70b-versatile",
-            max_tokens=max_tokens, temperature=0.1, session_id=session_id,
+            max_tokens=max_tokens, temperature=0.1,
+            session_id=session_id, agent_name="red_flag_agent",
         )
     except Exception as e:
         logger.warning("red_flag_70b_failed_falling_back", error=str(e), session_id=session_id)
         return await groq_chat(
             messages=messages, model="llama-3.1-8b-instant",
-            max_tokens=max_tokens, temperature=0.1, session_id=session_id,
+            max_tokens=max_tokens, temperature=0.1,
+            session_id=session_id, agent_name="red_flag_agent_fallback",
         )
 
 
@@ -144,18 +142,11 @@ async def call_six_second_agent(
     temperature: float = 0.2,
     session_id: str = "",
 ) -> tuple[str, dict]:
-    """
-    SixSecondAgent — tries qwen3-32b first (reliable JSON, separate RPM bucket),
-    falls back to llama-3.1-8b on failure or empty response.
-    gpt-oss-20b was removed — consistently returned empty responses.
-    """
     try:
         text, meta = await groq_chat(
-            messages=messages,
-            model="qwen/qwen3-32b",
-            max_tokens=max_tokens,
-            temperature=temperature,
-            session_id=session_id,
+            messages=messages, model="qwen/qwen3-32b",
+            max_tokens=max_tokens, temperature=temperature,
+            session_id=session_id, agent_name="six_second_agent",
         )
         if not text or not text.strip():
             raise ValueError("qwen3_32b_empty_response")
@@ -163,11 +154,9 @@ async def call_six_second_agent(
     except Exception as e:
         logger.warning("six_second_primary_failed_falling_back", error=str(e), session_id=session_id)
         return await groq_chat(
-            messages=messages,
-            model="llama-3.1-8b-instant",
-            max_tokens=max_tokens,
-            temperature=temperature,
-            session_id=session_id,
+            messages=messages, model="llama-3.1-8b-instant",
+            max_tokens=max_tokens, temperature=temperature,
+            session_id=session_id, agent_name="six_second_agent_fallback",
         )
 
 
@@ -177,26 +166,17 @@ async def call_competitive_agent(
     temperature: float = 0.2,
     session_id: str = "",
 ) -> tuple[str, dict]:
-    """
-    CompetitiveAgent uses qwen3-32b on Groq — 60 RPM combined, separate bucket.
-    max_tokens=1500 to cover ~400 tok thinking block + ~400 tok JSON output.
-    Falls back to NIM if Groq exhausted.
-    """
     try:
         return await groq_chat(
-            messages=messages,
-            model="qwen/qwen3-32b",
-            max_tokens=max_tokens,
-            temperature=temperature,
-            session_id=session_id,
+            messages=messages, model="qwen/qwen3-32b",
+            max_tokens=max_tokens, temperature=temperature,
+            session_id=session_id, agent_name="competitive_agent",
         )
     except Exception as e:
         logger.warning("competitive_groq_failed_falling_back", error=str(e), session_id=session_id)
         return await nim_chat(
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            session_id=session_id,
+            messages=messages, max_tokens=max_tokens,
+            temperature=temperature, session_id=session_id,
         )
 
 

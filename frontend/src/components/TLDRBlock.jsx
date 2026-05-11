@@ -49,33 +49,49 @@ export function TLDRBlock({ review }) {
         </button>
       </div>
 
-      {/* Shortlist verdict — hero row */}
-      <div className="rounded-xl bg-[--roast-surface-2] border border-[--roast-border] px-4 py-3.5">
-        <div className="flex items-center gap-2 mb-1.5">
-          <Zap size={12} className="text-orange-400 shrink-0" />
-          <span className="text-[10px] font-semibold text-[--roast-muted] uppercase tracking-wider">Shortlist chance</span>
+      {/* Shortlist verdict — HERO. This is what they read first. */}
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="rounded-2xl border border-orange-500/20 px-5 py-5"
+        style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.07) 0%, rgba(249,115,22,0.03) 100%)' }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <Zap size={13} className="text-orange-400 shrink-0" />
+          <span className="text-[10px] font-semibold text-orange-400/70 uppercase tracking-wider">Shortlist chance</span>
         </div>
-        <p className="text-sm text-[--roast-text] leading-relaxed">{review.tldr_shortlist_chance}</p>
-      </div>
+        <p className="text-base sm:text-lg text-[--roast-text] leading-relaxed font-medium">{review.tldr_shortlist_chance}</p>
+      </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {/* Biggest blocker */}
-        <div className="rounded-xl bg-red-500/5 border border-red-500/15 px-4 py-3.5">
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08 }}
+          className="rounded-xl bg-red-500/5 border border-red-500/15 px-4 py-3.5"
+        >
           <div className="flex items-center gap-2 mb-1.5">
             <AlertTriangle size={12} className="text-red-400 shrink-0" />
             <span className="text-[10px] font-semibold text-red-400/70 uppercase tracking-wider">Biggest blocker</span>
           </div>
           <p className="text-sm text-[--roast-text-2] leading-relaxed">{review.tldr_biggest_blocker}</p>
-        </div>
+        </motion.div>
 
         {/* Fix first */}
-        <div className="rounded-xl bg-orange-500/5 border border-orange-500/15 px-4 py-3.5">
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.14 }}
+          className="rounded-xl bg-orange-500/5 border border-orange-500/15 px-4 py-3.5"
+        >
           <div className="flex items-center gap-2 mb-1.5">
             <Wrench size={12} className="text-orange-400 shrink-0" />
             <span className="text-[10px] font-semibold text-orange-400/70 uppercase tracking-wider">Fix first</span>
           </div>
           <p className="text-sm text-orange-200/80 leading-relaxed">{review.tldr_fix_first}</p>
-        </div>
+        </motion.div>
       </div>
     </div>
   )

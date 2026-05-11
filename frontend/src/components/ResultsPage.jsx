@@ -114,7 +114,7 @@ export function ResultsPage({ sections, sessionId, meta, analysisCount }) {
 
   return (
     <div className="min-h-screen px-4 py-8 sm:py-12 relative z-10">
-      <div className="max-w-2xl mx-auto space-y-5">
+      <div className="max-w-3xl mx-auto space-y-5">
 
         {/* Header */}
         <motion.div
@@ -127,7 +127,7 @@ export function ResultsPage({ sections, sessionId, meta, analysisCount }) {
             <p className="text-xs text-[--roast-muted] uppercase tracking-widest font-mono truncate">
               {meta.role} · {meta.companyType} · {meta.market}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-bold">Your Roast</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">🔥 Your Roast</h1>
           </div>
           {review && (
             <div className="shrink-0 pt-1">

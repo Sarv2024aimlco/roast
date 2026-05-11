@@ -162,6 +162,13 @@ async def feedback(body: FeedbackRequest):
     else:
         redis.incr(f"{combo_key}:not_useful")
 
+    # Send to Langfuse — links feedback to the session trace
+    try:
+        from backend.llm.langfuse_client import trace_feedback
+        trace_feedback(session_id=body.session_id, useful=body.useful)
+    except Exception:
+        pass
+
     logger.info(
         "feedback_received",
         useful=body.useful,

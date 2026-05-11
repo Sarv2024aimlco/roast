@@ -26,7 +26,7 @@ async def run_six_second_trajectory_agent(
     Part A: simulates 6-second recruiter scan.
     Part B: analyses career trajectory, gaps, progression.
     """
-    task = SS_VERSIONS[SS_ACTIVE]
+    task = SS_VERSIONS[SS_ACTIVE].replace("{company_type}", company_type).replace("{market}", market)
 
     system = build_system_prompt(
         role=role,

@@ -1,3 +1,7 @@
+"""
+Market context prompt — full weight_map rules for all experience levels.
+"""
+
 VERSIONS = {
     "v1": """
 Analyse the provided market intelligence and produce a structured calibration object.
@@ -22,12 +26,27 @@ Output a JSON object with these fields:
   "confidence": "HIGH or LOW"
 }
 
-Weight map rules:
-- For Student/Fresher: cgpa and college_tier must be at least 0.6
-- For 7+ YOE: experience must be at least 0.85
-- For FAANG: dsa must be at least 0.9
-- For Early Stage Startup: dsa should be 0.2-0.4, projects should be 0.85+
-- For Indian Service Company: cgpa should be 0.65+, dsa should be 0.3 or lower
+Weight map rules — apply ALL that match, most specific rule wins:
+
+EXPERIENCE LEVEL RULES (apply first):
+- Student / Fresher: cgpa >= 0.6, college_tier >= 0.6, experience = 0.0, projects >= 0.7
+- Junior (0-2 YOE): cgpa = 0.4, college_tier = 0.3, experience = 0.5, projects >= 0.75
+- Mid-level (2-5 YOE): cgpa = 0.2, college_tier = 0.1, experience = 0.8, projects = 0.6
+- Senior (5-8 YOE): cgpa = 0.1, college_tier = 0.05, experience = 0.9, projects = 0.4
+- Staff / Principal (8+ YOE): cgpa = 0.0, college_tier = 0.0, experience = 0.95, projects = 0.3
+
+COMPANY TYPE RULES (apply on top of experience rules):
+- FAANG / Big Tech: dsa >= 0.9 (non-negotiable), open_source = 0.5
+- Indian Service Company: cgpa += 0.15 (add to experience-level value), dsa = 0.3 or lower, college_tier += 0.1
+- Early Stage Startup: dsa = 0.2-0.4, projects >= 0.85, open_source = 0.6
+- Indian Product Company: dsa = 0.6-0.8, projects >= 0.75
+- MNC India (Non-FAANG): dsa = 0.5, cgpa += 0.1 for freshers
+- Semiconductor / Hardware: dsa = 0.3, projects >= 0.8 (hardware projects), open_source = 0.2
+- Consulting / IB: dsa = 0.2, projects = 0.5, cgpa += 0.1
+
+MARKET RULES:
+- USA market: college_tier = 0.2 (less important than India), open_source = 0.6
+- Singapore / UK / UAE: similar to USA — college_tier less important, open_source more important
 
 Set confidence to LOW if market signals are thin or contradictory.
 """.strip()

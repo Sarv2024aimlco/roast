@@ -80,6 +80,7 @@ async def groq_chat(
     max_tokens: int = 1000,
     temperature: float = 0.1,
     session_id: str = "",
+    agent_name: str = "",
 ) -> tuple[str, dict]:
     """
     Make a Groq chat completion with:
@@ -100,9 +101,11 @@ async def groq_chat(
 
     backoff = [2, 4, 8]
     client, key_idx = await _get_client()  # round-robin pick
+    import time
 
     for attempt in range(3):
         try:
+            t0 = time.monotonic()
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -135,17 +138,20 @@ async def groq_chat(
 
             groq_circuit.record_success()
 
+            input_tokens = response.usage.prompt_tokens if response.usage else None
+            output_tokens = response.usage.completion_tokens if response.usage else None
+            latency_ms = round((time.monotonic() - t0) * 1000, 1)
+
             metadata = {
                 "provider": "groq",
                 "model": model,
                 "key_index": key_idx,
                 "rpm_remaining": remaining,
-                "input_tokens": response.usage.prompt_tokens if response.usage else None,
-                "output_tokens": response.usage.completion_tokens if response.usage else None,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
             }
 
             # Proactive fallback warning — log but don't switch here
-            # The caller (provider router) decides whether to switch
             if remaining is not None and remaining < RPM_FALLBACK_THRESHOLD:
                 logger.warning(
                     "groq_rpm_low",
@@ -153,6 +159,24 @@ async def groq_chat(
                     remaining=remaining,
                     session_id=session_id,
                 )
+
+            # Trace to Langfuse — fire-and-forget, never blocks
+            if session_id and agent_name:
+                try:
+                    from backend.llm.langfuse_client import trace_llm_call
+                    trace_llm_call(
+                        session_id=session_id,
+                        agent_name=agent_name,
+                        model=model,
+                        provider="groq",
+                        messages=messages,
+                        response_text=text,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                        latency_ms=latency_ms,
+                    )
+                except Exception:
+                    pass  # never let tracing break the pipeline
 
             return text, metadata
 

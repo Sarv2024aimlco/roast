@@ -104,11 +104,20 @@ DO NOT search for: DuckDuckGo, Groq, LangGraph, LangChain, FastAPI, Redis, WebSo
 RAG, LLM, MCP, Docker, Python, React, PyTorch, HuggingFace, Deepgram, Tavily, \
 or any tool/concept you already know well.
 
-DIFFICULTY LEVELS (calibrate against {experience_level}):
-- tutorial: following a guide, no novel decisions
-- intermediate: combining systems, some novel decisions
-- advanced: non-trivial architecture, production constraints
-- exceptional: genuinely rare for this experience level
+DIFFICULTY LEVELS (calibrate against {experience_level} doing {role}):
+These are role-specific — "advanced" means different things for different roles.
+- tutorial: following a guide or tutorial, no novel decisions, standard stack usage
+- intermediate: combining multiple systems with some novel decisions, some production awareness
+- advanced: non-trivial architecture for this role type, real production constraints solved
+- exceptional: genuinely rare for this experience level in this role — most candidates at this level cannot do this
+
+Role-specific difficulty calibration examples:
+- SDE/Backend: tutorial=CRUD API, intermediate=multi-service system with auth, advanced=distributed system with consistency guarantees, exceptional=novel protocol or OSS contribution
+- AI Engineer: tutorial=Colab notebook, intermediate=RAG pipeline with basic retrieval, advanced=production multi-agent system with fallback chains and observability, exceptional=novel retrieval architecture or fine-tuned model in production
+- Data Analyst: tutorial=Excel pivot tables, intermediate=SQL window functions + Python pandas, advanced=end-to-end ML pipeline with deployed model, exceptional=self-built analytics infrastructure used by org
+- Data Engineer: tutorial=basic ETL script, intermediate=Airflow DAG with error handling, advanced=streaming pipeline with exactly-once semantics, exceptional=novel data architecture at scale
+- VLSI: tutorial=basic RTL module, intermediate=verified RTL with UVM testbench, advanced=timing-closed design with DFT, exceptional=silicon-proven design or novel verification methodology
+- Embedded: tutorial=Arduino blink, intermediate=FreeRTOS task with peripheral driver, advanced=bare-metal bootloader or AUTOSAR component, exceptional=novel RTOS extension or safety-critical firmware
 
 ROLE CONTEXT:
 {role_calibration}
@@ -117,17 +126,17 @@ Produce final JSON:
 {{
   "project_evaluations": [{{\
     "name": "project name",
-    "what_it_proves": "specific capabilities",
+    "what_it_proves": "specific capabilities demonstrated",
     "difficulty_level": "tutorial|intermediate|advanced|exceptional",
-    "strongest_signal": "most impressive decision and WHY",
+    "strongest_signal": "most impressive decision and WHY it is impressive for this role/level",
     "what_is_missing": "what would make this stronger",
     "resume_vs_reality": "underselling|accurate|overselling — with rewritten bullet if underselling"
   }}],
-  "overall_technical_level": "honest 2-3 sentence assessment",
-  "most_differentiated_signal": "what makes this candidate stand out",
-  "biggest_technical_gap": "what is genuinely missing",
+  "overall_technical_level": "honest 2-3 sentence assessment calibrated to {experience_level} doing {role}",
+  "most_differentiated_signal": "what makes this candidate stand out vs peers at same level",
+  "biggest_technical_gap": "what is genuinely missing for {role} at {company_type}",
   "communication_gap": "what is real but poorly communicated — rewritten version",
-  "honest_summary": "2-3 sentences, no softening",
+  "honest_summary": "2-3 sentences, no softening, calibrated to {experience_level}",
   "unverified_skills": ["skills listed but no project evidence"]
 }}"""
 

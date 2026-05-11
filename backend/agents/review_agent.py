@@ -7,7 +7,7 @@ from backend.agents.schemas import (
     TechnicalDepthOutput
 )
 from backend.agents.prompts.template import build_system_prompt
-from backend.agents.prompts.review_prompt import VERSIONS as RV_VERSIONS, ACTIVE as RV_ACTIVE
+from backend.agents.prompts.review_prompt import get_review_task, ACTIVE as RV_ACTIVE
 from backend.llm.router import call_review_agent
 from backend.agents.json_utils import extract_json
 
@@ -38,10 +38,29 @@ def _passes_quality_gate(review: ReviewOutput) -> tuple[bool, str]:
         return False, f"too_short:{total}"
     if total > MAX_WORDS:
         return False, f"too_long:{total}"
+
+    # Follow-up questions must exist and be specific (not generic filler)
     for field in ["six_second_followups", "whats_hurting_followups",
                   "career_story_followups", "competitive_followups"]:
-        if not getattr(review, field, []):
+        followups = getattr(review, field, [])
+        if not followups:
             return False, f"missing_followups:{field}"
+        # Each follow-up must be at least 25 chars — filters out "Tell me more." etc.
+        for q in followups:
+            if len(q.strip()) < 25:
+                return False, f"followup_too_generic:{field}:{q[:30]}"
+
+    # whats_hurting_section must contain at least one inference chain (→ arrow)
+    if review.whats_hurting_section:
+        chains = re.findall(r'→|->|→', review.whats_hurting_section)
+        if len(chains) < 1:
+            return False, "no_inference_chains_in_hurting_section"
+
+    # action_plan_section must be substantive
+    action_words = len(review.action_plan_section.split())
+    if action_words < 60:
+        return False, f"action_plan_too_short:{action_words}"
+
     return True, "ok"
 
 
@@ -146,7 +165,7 @@ async def run_review_agent(
     Writes the complete flowing review from all upstream outputs.
     Uses full fallback chain with quality gate.
     """
-    task = RV_VERSIONS[RV_ACTIVE]
+    task = get_review_task(market=market, company_type=company_type, experience_level=experience_level)
 
     system = build_system_prompt(
         role=role,
@@ -182,9 +201,11 @@ Write the complete review JSON.""",
     # Try up to 2 times per provider (quality gate retry)
     for attempt in range(2):
         try:
+            # Give more tokens on retry — first attempt may have truncated
+            attempt_max_tokens = 3000 if attempt == 0 else 4000
             text, meta = await call_review_agent(
                 messages=messages,
-                max_tokens=3000,
+                max_tokens=attempt_max_tokens,
                 session_id=session_id,
             )
 
@@ -224,15 +245,41 @@ Write the complete review JSON.""",
                     session_id=session_id,
                 )
                 if attempt == 0:
-                    # Add explicit length instruction and retry
-                    messages.append({
-                        "role": "assistant",
-                        "content": text,
-                    })
-                    messages.append({
-                        "role": "user",
-                        "content": f"The review failed quality check: {reason}. Rewrite with 500-1200 words across the prose sections.",
-                    })
+                    # Specific retry instruction based on failure reason
+                    if "no_inference_chains" in reason:
+                        retry_instruction = (
+                            "The review failed because whats_hurting_section has no inference chains. "
+                            "EVERY weakness MUST use this exact format: "
+                            "\"Recruiter sees [exact quote] → assumes [specific assumption] → decides [concrete outcome]\". "
+                            "Rewrite whats_hurting_section with at least 3 inference chains using → arrows. "
+                            "Also ensure career_story_section is at least 120 words."
+                        )
+                    elif "too_short" in reason:
+                        retry_instruction = (
+                            f"The review failed quality check: {reason}. "
+                            "Rewrite with 600-1200 words across all five prose sections. "
+                            "career_story_section and competitive_position_section must each be at least 120 words."
+                        )
+                    elif "action_plan_too_short" in reason:
+                        retry_instruction = (
+                            "The action_plan_section is too short. "
+                            "Rewrite it with 3-5 specific actions, each with exact rewrites, expected impact, and time required. "
+                            "Minimum 80 words."
+                        )
+                    elif "followup_too_generic" in reason:
+                        retry_instruction = (
+                            "Follow-up questions are too generic. "
+                            "Each follow-up MUST mention a specific project name, skill, or decision from this resume. "
+                            "No generic questions like 'tell me more' or 'can you elaborate'."
+                        )
+                    else:
+                        retry_instruction = (
+                            f"The review failed quality check: {reason}. "
+                            "Rewrite with 600-1200 words. Ensure all sections are complete."
+                        )
+
+                    messages.append({"role": "assistant", "content": text})
+                    messages.append({"role": "user", "content": retry_instruction})
                     continue
                 # Second attempt also failed — use what we have
                 logger.warning("review_quality_gate_failed_both_attempts", session_id=session_id)
@@ -243,7 +290,7 @@ Write the complete review JSON.""",
                 word_count=_count_words(review),
                 provider=meta.get("provider"),
                 model=meta.get("model"),
-                prompt_version=RV_ACTIVE,
+                prompt_version=f"{RV_ACTIVE}:{market}:{company_type}",
             )
 
             return review

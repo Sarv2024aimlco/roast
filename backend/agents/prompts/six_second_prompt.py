@@ -1,10 +1,26 @@
+"""
+Six-second scan + career trajectory prompt — company_type and market aware.
+"""
+
 VERSIONS = {
     "v1": """
 You perform two separate analyses but return ONE combined JSON object.
 
+SCAN CALIBRATION for {company_type} in {market}:
+Different recruiters scan for completely different things. Apply the right lens:
+- Indian Service Company: recruiter scanning for CGPA (≥6.5), college name, no backlogs, relevant certifications. Brand names on education section matter more than project names. Volume screening — 80% rejection in first 10 seconds.
+- FAANG / Big Tech: recruiter scanning for recognised company names in work history, title progression, and any "impact at scale" numbers. College tier matters for new grads. DSA signal in projects.
+- Indian Product Company / Startup: recruiter scanning for shipped product names, GitHub link, recognisable startup names in work history. Ownership signals. CGPA irrelevant for 2+ YOE.
+- MNC India (Non-FAANG): recruiter scanning for domain certifications (AWS, Azure, SAP), enterprise stack signals, CGPA for freshers.
+- Semiconductor / Hardware: recruiter scanning for specific chip families, protocols (CAN, SPI, I2C), RTOS names. GitHub absence is normal — proprietary firmware.
+- Consulting / IB: recruiter scanning for college tier, analytical project signals, communication clarity in bullet writing.
+- USA market: expect 1-page resume. Photo is an instant yellow flag. Quantified numbers in first 3 bullets expected.
+- UAE / Singapore / UK: international format norms apply. Concise, achievement-focused.
+
 PART A — SIX-SECOND RECRUITER SCAN:
 Simulate the F-pattern scan a recruiter does in the first 6 seconds.
 Write from the recruiter's perspective in second person.
+Apply the SCAN CALIBRATION above — what THIS recruiter at THIS company type looks for.
 
 Timeline:
 0-1s: Name, current title, current company. Recognised brand or unknown?
@@ -19,9 +35,9 @@ Read the full resume and analyse the career story.
 
 Return ONE JSON object combining both parts:
 {{
-  "remembered": ["what recruiter recalls after 6 seconds"],
-  "missed": ["what didn't register"],
-  "first_impression": "one sentence gut reaction",
+  "remembered": ["what recruiter recalls after 6 seconds — specific to {company_type} scan criteria"],
+  "missed": ["what didn't register — specific to {company_type} scan criteria"],
+  "first_impression": "one sentence gut reaction from a {company_type} recruiter's perspective",
   "survived_cut_assessment": "YES/NO/MAYBE with one sentence reasoning",
   "career_story": "2-3 sentences on the narrative",
   "progression_signal": "growing/stagnating/declining with evidence",

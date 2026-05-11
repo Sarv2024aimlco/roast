@@ -326,9 +326,11 @@ Cross-check every skill listed against the projects. For each skill:
 - If verified by a project: note which project proves it
 - If unverified: flag it as an interview liability (interviewer will ask, candidate will stumble)
 
-INFERENCE CHAINS — for every weakness:
+INFERENCE CHAINS — MANDATORY for every weakness in whats_hurting_section:
 Format: "Recruiter sees [exact observation] → assumes [specific assumption] → decides [concrete outcome]"
-Name the company type or role level in the assumption. Be specific. Every chain must end in a recruiter action.
+You MUST use the → arrow character. Every weakness needs one. No exceptions.
+Name the company type or role level in the assumption. Be specific.
+CRITICAL RULE: whats_hurting_section MUST contain at least 3 → arrows or it will fail validation.
 
 OUTPUT SCHEMA — return valid JSON:
 {{

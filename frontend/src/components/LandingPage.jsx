@@ -330,7 +330,7 @@ export function LandingPage({ onAnalysisStarted }) {
                 {isReferred ? (
                   <>Get your resume<br /><span className="text-destroyed">roasted free.</span></>
                 ) : (
-                  <>Your resume.<br /><span className="text-destroyed">Destroyed.</span><br />Improved.</>
+                  <>Your resume.<br /><span className="text-destroyed">Roasted.</span><br />Improved.</>
                 )}
               </motion.h1>
 
@@ -339,8 +339,8 @@ export function LandingPage({ onAnalysisStarted }) {
                 transition={{ delay: 0.35, duration: 0.4 }}
                 className="text-[--roast-muted] text-sm sm:text-base lg:text-lg leading-relaxed max-w-md"
               >
-                Brutally honest feedback calibrated to live hiring data —
-                not generic tips from a chatbot.
+                Critically honest feedback calibrated to live hiring data —
+                no more generic tips from a chatbot.
               </motion.p>
             </div>
 

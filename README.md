@@ -3,7 +3,7 @@
 # 🔥 ROAST
 ### Resume Intelligence System
 
-**[🌐 Live Demo →](https://roast-app-ckard.ondigitalocean.app)** &nbsp;·&nbsp; **[📹 Video Demo →](#)** *(coming soon)*
+**[🌐 Live Demo ](https://roast-app-ckard.ondigitalocean.app)**
 
 > Drop your resume. Get destroyed. Get better.
 
@@ -35,18 +35,9 @@ ROAST does something different. It pulls **live market intelligence for your exa
 
 ## Demo
 
-<!-- Add screenshot or GIF here -->
-> 📸 *Screenshot placeholder — add after deployment*
+![ROAST App Demo](image.png)
 
-```
-BOTTOM LINE
-────────────────────────────────────────────────────
-Shortlist chance:   Strong for early-stage AI startups. Top 20% among freshers.
-Biggest blocker:    No deployment evidence with real users or metrics.
-Fix first:          Add "X analyses run" to ROAST bullet. That's the difference
-                    between a project and a product.
-────────────────────────────────────────────────────
-```
+
 
 ---
 

@@ -25,3 +25,9 @@ frontend/dist/
 roast_chat.txt
 roastv2.txt
 q-dev-chat-*.md
+ROAST_COMPLETE_DEVELOPER_RUNBOOK.md
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
